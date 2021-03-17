@@ -1,0 +1,67 @@
+##############################
+# Column types for IBES data #
+##############################
+
+str:
+  # Detail file
+  - cname
+  - curr
+  - curr_act
+  - currfl
+  - cusip
+  - oftic
+  - pdf
+  - report_curr
+  - ticker
+  # Detail Guidance file
+  - act_std
+  - action
+  - curr
+  - diff_code
+  - guidance_code
+  - measure
+  - pdicity
+  - range_desc
+  - ticker
+  - units
+
+date:
+  # ID File
+  - sdates
+  # Adjustment file
+  - spdates
+  # Detail file
+  - actdats
+  - anndats
+  - actdats_act
+  - anndats_act
+  - fpedats
+  - revdats
+  # Detail Guidance file
+  - actdats
+  - anndats
+  - mod_date
+
+float32:
+  # Detail file
+  - acttims
+  - acttims_act
+  - actual
+  - analys
+  - anntims
+  - anntims_act
+  - estimator
+  - revtims
+  - usfirm
+  - value
+  # Detail Guidance file
+  - mean_at_date
+  - acttims
+  - anntims
+  - eefymo
+  - mod_time
+  - prd_mon
+  - prd_yr
+  - usfirm
+  - val_1
+  - val_2

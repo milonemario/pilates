@@ -1,0 +1,44 @@
+##################################
+# Column types for WRDS SEC data #
+##################################
+
+str:
+  - amendmenttype
+  - cik
+  - coname
+  - confdeniedexpired
+  - cusip
+  - datedeniedexpired
+  - datereported
+  - fname
+  - form
+  - form13ffilenumber
+  - investmentdiscretion
+  - isamendment
+  - isconfidentialomitted
+  - nameofissuer
+  - omfilen
+  - omname
+  - othermanager
+  - putcall
+  - reasonfornonconfidentiality
+  - reporttype
+  - sshprnamttype
+  - titleofclass
+
+date:
+  - fdate
+  - rdate
+
+float32:
+  - None
+  - om
+  - omcik
+  - omsqnm
+  - otherIncludedManagersCount
+  - Shared
+  - Sole
+  - sshPrnamt
+  - tableEntryTotal
+  - tableValueTotal
+  - value

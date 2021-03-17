@@ -1,0 +1,88 @@
+##############################
+# Column types for CRSP data #
+##############################
+
+str:
+  # Linktable
+  - linkprim
+  - liid
+  - linktype
+  # CRSP
+  - comnam
+  - cusip
+  - naics
+  - ncusip
+  - primexch
+  - secstat
+  - shrcls
+  - ticker
+  - trdstat
+  - tsymbol
+
+date:
+  # Linktable
+  - linkdt
+  - linkenddt
+  # CRSP
+  - date
+  - altprcdt
+  - dclrdt
+  - dlpdt
+  - nameendt
+  - nextdt
+  - paydt
+  - rcrddt
+  - shrenddt
+
+float32:
+  # Linktable
+  - gvkey
+  - lpermno
+  - lpermco
+  # CRSP
+  - permno
+  - accomp
+  - acperm
+  - ask
+  - askhi
+  - bid
+  - bidlo
+  - cfacpr
+  - cfacshr
+  - distcd
+  - divamt
+  - dlamt
+  - dlprc
+  - dlret
+  - dlretx
+  - dlstcd
+  - ewretd
+  - ewretx
+  - exchcd
+  - facpr
+  - facshr
+  - hexcd
+  - hsiccd
+  - hsicig
+  - hsicmg
+  - issuno
+  - mmcnt
+  - nmsind
+  - nsdinx
+  - numtrd
+  - nwperm
+  - openprc
+  - permco
+  - prc
+  - ret
+  - retx
+  - shrcd
+  - shrflg
+  - shrout
+  - siccd
+  - sprtrn
+  - trtscd
+  - vol
+  - vwretd
+  - vwretx
+

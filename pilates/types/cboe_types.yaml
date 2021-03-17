@@ -1,0 +1,24 @@
+#########################
+# Column types for CBOE #
+#########################
+
+date:
+  - date
+
+float32:
+  - vixo
+  - vixh
+  - vixl
+  - vix
+  - vxoo
+  - vxoh
+  - vxol
+  - vxo
+  - vxno
+  - vxnh
+  - vxnl
+  - vxn
+  - vxdo
+  - vxdh
+  - vxdl
+  - vxd
