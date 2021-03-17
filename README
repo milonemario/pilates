@@ -1,0 +1,12 @@
+Pilates is a Python library to create data for Accounting, Finance, and Economic Research.
+
+It is able to process financial and accounting data from WRDS and other useful sources.
+
+The library is flexible by using separate modules (plugins) to process each data
+sources, such as Compustat, CRSP, IBES, FRED, etc.
+
+To install, just run
+python setup.py install
+
+To install in develop mode (editable), run
+python setup.py develop

@@ -1,7 +1,7 @@
 """
 Python module to create data for Accounting, Finance, and Economic Research.
 
-Pilates implements general procedures to process financial and accounting
+It implements general procedures to process financial and accounting
 data from WRDS and other useful sources.
 
 The module implements several classes to process different data sources, such
@@ -26,7 +26,6 @@ pd.options.mode.chained_assignment = None
 # Directories
 _types_dir = os.path.dirname(__file__)+'/types/'
 _modules_dir = os.path.dirname(__file__)+'/modules/'
-
 
 class data:
     """ Main class of pilates.
