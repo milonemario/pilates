@@ -87,7 +87,7 @@ class comp(data_module):
 
         """
         key = self.key
-        cols_req = key + ['indfmt', 'datafmt', 'consol', 'popsrc']
+        cols_req = ['indfmt', 'datafmt', 'consol', 'popsrc']
         data_key = self.d.open_data(data, key)
         index = data_key.index
         comp = self.d.open_data(self.fund,
@@ -183,12 +183,13 @@ class comp(data_module):
         # Keep the full compustat key (to correctly compute lags)
         df = self.d.open_data(self.fund, key).drop_duplicates()
         # Get additional fields first (to ensure overwritten fields)
+        fields_add = []
         for f in fields:
             if hasattr(self, '_' + f):
                 # print(f)
                 fn = getattr(self, '_' + f)
                 df[f] = fn(df)
-        fields_add = df.columns
+                fields_add += [f]
         fund_raw = [f for f in fields if (f in cols_fund and
                                           f not in fields_add)]
         names_raw = [f for f in fields if (f in cols_names and

@@ -6,7 +6,7 @@ from pilates import data_module
 import pandas as pd
 
 
-class tr13f(wrds_module):
+class tr13f(data_module):
 
     def __init__(self, d):
         data_module.__init__(self, d)
