@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(name='pilates',
       version='0.0.1',
-      description='Python library to create data for Accounting, Finance, and Economic Research.',
+      description='Pilates Is a Library of Accounting Tools for EconomistS. Its purpose is to help data creation for Accounting, Finance, and Economic Research.',
       url='https://github.com/milonemario/pilates',
       author='Mario Milone',
       author_email='milonemario@gmail.com',
@@ -18,5 +18,6 @@ setup(name='pilates',
             'pandas_market_calendars',
             'fredapi',
             'rapidfuzz',
+            'psycogpg2',
       ],
       zip_safe=False)
