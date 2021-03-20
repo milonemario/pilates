@@ -1,6 +1,6 @@
 # Pilates
 
-Pilates Is a Library of Accounting Tools for EconomistS.
+*P*ilates *I*s a *L*ibrary of *A*ccounting *T*ools for *E*conomist*S*.
 Its purpose is to help data creation for Accounting, Finance, and Economic Research.
 
 It is able to process financial and accounting data from
