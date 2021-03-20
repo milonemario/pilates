@@ -83,9 +83,9 @@ class pin(data_module):
 
     def get_fields(self, data, fields):
         key = self.key
-        df = self.d.open_data(self.pins, key+fields)
+        df = self.open_data(self.pins, key+fields)
         # Merge to the user data
-        dfu = self.d.open_data(data, [self.col_id, self.d.col_date])
+        dfu = self.open_data(data, [self.col_id, self.d.col_date])
         # Extract year from user data
         if self.d.col_date_type == 'date':
             dt = pd.to_datetime(dfu[self.d.col_date]).dt

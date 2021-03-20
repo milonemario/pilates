@@ -23,7 +23,7 @@ class fred(data_module):
         df_fred = self.fred.get_series('DGS10')
         df = pd.DataFrame(df_fred).reset_index()
         df.columns = ['date', 'r']
-        dfu = self.d.open_data(data, [col_date])
+        dfu = self.open_data(data, [col_date])
         dfu.columns = ['date']
         # If quarterly data, use the last day of the month
         if self.d.freq == 'Q':

@@ -2,16 +2,16 @@
 Provides processing functions for CRSP data.
 """
 
-from pilates import data_module
+from pilates import wrds_module
 import pandas as pd
 import numpy as np
 import pandas_market_calendars as mcal
 
 
-class crsp(data_module):
+class crsp(wrds_module):
 
     def __init__(self, d):
-        data_module.__init__(self, d)
+        wrds_module.__init__(self, d)
         # Initialize values
         self.col_id = 'permno'
         self.col_date = 'date'
@@ -48,8 +48,8 @@ class crsp(data_module):
         cols_link = ['gvkey', 'lpermno', 'linktype', 'linkprim',
                      'linkdt', 'linkenddt']
         # Open the data
-        data_key = self.d.open_data(data, key).drop_duplicates().dropna()
-        link = self.d.open_data(self.linktable, cols_link)
+        data_key = self.open_data(data, key).drop_duplicates().dropna()
+        link = self.open_data(self.linktable, cols_link)
         link = link.dropna(subset=['gvkey', 'lpermno', 'linktype', 'linkprim'])
         # Retrieve the specified links
         link = link[(link.linktype.isin(self.linktype)) &
@@ -72,7 +72,7 @@ class crsp(data_module):
             print("Warning: The merged permno",
                   "contains {:} duplicates".format(n_dup))
         # Add the permno to the user's data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(dm, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.permno.astype('float32'))
@@ -105,14 +105,14 @@ class crsp(data_module):
         """
         # Open and prepare the user data
         cols = ['permno', col_shares, self.d.col_date]
-        dfu = self.d.open_data(data, cols)
+        dfu = self.open_data(data, cols)
         index = dfu.index
         dt = pd.to_datetime(dfu[self.d.col_date]).dt
         dfu['year'] = dt.year
         dfu['month'] = dt.month
         # Open and prepare the CRSP data
         cols = ['permno', 'date', 'cfacshr']
-        df = self.d.open_data(self.msf, cols)
+        df = self.open_data(self.msf, cols)
         dt = pd.to_datetime(df.date).dt
         df['year'] = dt.year
         df['month'] = dt.month
@@ -144,11 +144,11 @@ class crsp(data_module):
         key = [self.col_id, self.col_date]
         if file == self.dsi:
             key = [self.col_date]
-        df = self.d.open_data(file, key+fields)
+        df = self.open_data(file, key+fields)
         # Construct the object to return
         if data is not None:
             # Merge and return the fields
-            data_key = self.d.open_data(data, key)
+            data_key = self.open_data(data, key)
             index = data_key.index
             dfin = data_key.merge(df, how='left', on=key)
             dfin.index = index
@@ -169,7 +169,7 @@ class crsp(data_module):
             self.d.col_date -- Date field to use for the user data
         """
         keyu = ['permno', self.d.col_date]
-        dfu = self.d.open_data(data, keyu)
+        dfu = self.open_data(data, keyu)
         dfu.loc[:, self.col_date] = dfu[self.d.col_date]
         dfu[fields] = self._get_fields(fields, dfu, self.dsf)
         return(dfu[fields])
@@ -214,7 +214,7 @@ class crsp(data_module):
             values = var.shift(-nperiods).reset_index()
         # Open user data
         cols_data = [self.col_id, self.d.col_date]
-        dfu = self.d.open_data(data, cols_data)
+        dfu = self.open_data(data, cols_data)
         index = dfu.index
         # Use the last or next trading day if requested
         # Shift a maximum of 6 days
@@ -237,7 +237,7 @@ class crsp(data_module):
     def _tso(self, data):
         """ Compute total share outstanding. """
         cols = ['permno', 'date', 'shrout', 'cfacshr']
-        df = self.d.open_data(self.sf, cols)
+        df = self.open_data(self.sf, cols)
         if self.freq == 'M':
             dt = pd.to_datetime(df.date).dt
             df['year'] = dt.year
@@ -246,7 +246,7 @@ class crsp(data_module):
         else:
             key = ['permno', 'date']
         df['tso'] = df.shrout * df.cfacshr * 1000
-        dfu = self.d.open_data(data, ['permno', self.d.col_date])
+        dfu = self.open_data(data, ['permno', self.d.col_date])
         if self.freq == 'M':
             dt = pd.to_datetime(dfu[self.d.col_date]).dt
             dfu['year'] = dt.year
@@ -430,7 +430,7 @@ class crsp(data_module):
         mindate.name = 'mindate'
         # Merge the min date to user data
         cols_data = [self.col_id, self.d.col_date]
-        dfu = self.d.open_data(data, cols_data)
+        dfu = self.open_data(data, cols_data)
         index = dfu.index
         dfin = dfu.merge(mindate, how='left', on=self.col_id)
         dfin['age'] = (dfin[self.d.col_date] - dfin.mindate).dt.days / 365.
@@ -502,7 +502,7 @@ class crsp(data_module):
         dse = dse[['permno','startdate', 'enddate']]
         # Open user data
         cols_data = [self.col_id, self.d.col_date]
-        dfu = self.d.open_data(data, cols_data)
+        dfu = self.open_data(data, cols_data)
         index = dfu.index
         # Merge the dates and create the delist dummy
         dfin = dfu.merge(dse, how='left', on=self.col_id)

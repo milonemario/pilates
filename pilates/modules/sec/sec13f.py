@@ -2,16 +2,16 @@
 Provides classes and functions to process WRDS SEC data.
 """
 
-from pilates import data_module
+from pilates import wrds_module
 import pandas as pd
 import numpy as np
 import datetime
 
 
-class sec13f(data_module):
+class sec13f(wrds_module):
 
     def __init__(self, d):
-        data_module.__init__(self, d)
+        wrds_module.__init__(self, d)
         # Initialize values
 
     def get_io_perc(self, data):
@@ -36,7 +36,7 @@ class sec13f(data_module):
         key = ['coname', 'rdate']
         cols = ['cik', 'fname', 'fdate', 'rdate', 'coname', 'reporttype',
                 'amendmenttype', 'confdeniedexpired', 'tableentrytotal']
-        su = self.d.open_data(self.summary, cols).drop_duplicates()
+        su = self.open_data(self.summary, cols).drop_duplicates()
         su = su[su.rdate >= datetime.date(2013, 6, 30)]
         su['first_fdate'] = su.groupby(key).fdate.transform('min')
         # Only consider restatements within one month after the first filing
@@ -62,7 +62,7 @@ class sec13f(data_module):
         # Merge the Holdings data #
         ###########################
         cols = ['cusip', 'fname', 'sshprnamt']
-        hol = self.d.open_data(self.holdings, cols)
+        hol = self.open_data(self.holdings, cols)
         m = suf.merge(hol, how='left', on='fname')
         m = m.rename({'sshprnamt': 'shares'}, axis=1)
         # Keep data after Q2-2013 when it became required
@@ -90,11 +90,11 @@ class sec13f(data_module):
         # # 1 - Clean the mgrno
         # cr = ma[['cik', 'rdate']].drop_duplicates()
         # # Add the link to mgrno (from TR-S34) using WRDS link file
-        # link = self.d.open_data(self.link, ['cik', 'mgrno',
+        # link = self.open_data(self.link, ['cik', 'mgrno',
         #                                     'matchrate', 'flag'])
         # cr = cr.merge(link, how='left', on='cik')
         # # # Flag the mgrno that are present on TR-S34 after 2013-06-30
-        # # s34 = self.d.open_data(self.d.tr13f.type1, ['mgrno', 'fdate'])
+        # # s34 = self.open_data(self.d.tr13f.type1, ['mgrno', 'fdate'])
         # # s34 = s34[s34.fdate.dt.date >= datetime.date(2013, 6, 30)]
         # # s34mgrnos = s34.mgrno.unique()
         # # cr['ins34'] = False
@@ -135,9 +135,9 @@ class sec13f(data_module):
         ############################
         data_cols = self.d.get_fields_names(data)
         if 'permno' in data_cols:
-            dfu = self.d.open_data(data, ['permno', self.d.col_date])
+            dfu = self.open_data(data, ['permno', self.d.col_date])
         elif 'gvkey' in data_cols:
-            dfu = self.d.open_data(data, ['gvkey', self.d.col_date])
+            dfu = self.open_data(data, ['gvkey', self.d.col_date])
             dfu['permno'] = self.d.crsp.permno_from_gvkey(dfu)
         else:
             raise Exception('get_io_perc only accepts permno or gvkey ' +

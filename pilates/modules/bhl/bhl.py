@@ -63,9 +63,9 @@ class bhl(data_module):
     def get_fields(self, data, fields):
         key = ['year', 'month']
 
-        df = self.d.open_data(self.bhl, key+fields)
+        df = self.open_data(self.bhl, key+fields)
         # Merge to the user data
-        dfu = self.d.open_data(data, [self.d.col_date])
+        dfu = self.open_data(data, [self.d.col_date])
         # Extract year and month from user data
         dt = pd.to_datetime(dfu[self.d.col_date]).dt
         dfu['year'] = dt.year

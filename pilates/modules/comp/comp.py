@@ -3,12 +3,12 @@ Module to provide processing functions for Compustat data
 
 """
 
-from pilates import data_module
+from pilates import wrds_module
 import pandas as pd
 import numpy as np
 
 
-class comp(data_module):
+class comp(wrds_module):
     """ Class providing main processing methods for the Compustat data.
 
     One instance of this classs is automatically created and accessible from
@@ -34,7 +34,7 @@ class comp(data_module):
     """
 
     def __init__(self, d):
-        data_module.__init__(self, d)
+        wrds_module.__init__(self, d)
         # Initialize values
         self.col_id = 'gvkey'
         self.col_date = 'datadate'
@@ -90,7 +90,7 @@ class comp(data_module):
         cols_req = ['indfmt', 'datafmt', 'consol', 'popsrc']
         data_key = self.d.open_data(data, key)
         index = data_key.index
-        comp = self.d.open_data(self.fund,
+        comp = self.open_data(self.fund,
                                 key+fields+cols_req).drop_duplicates()
         # Filter the fund data
         comp = comp[comp.indfmt.isin(self.indfmt) &
@@ -142,9 +142,9 @@ class comp(data_module):
 
         """
         key = [self.col_id]
-        data_key = self.d.open_data(data, key)
+        data_key = self.open_data(data, key)
         index = data_key.index
-        comp = self.d.open_data(self.names, key+fields).drop_duplicates()
+        comp = self.open_data(self.names, key+fields).drop_duplicates()
         # Note: thereare no duplicates in the name file
         # Merge and return the fields
         dfin = data_key.merge(comp, how='left', on=key)
@@ -175,13 +175,13 @@ class comp(data_module):
         """
         key = self.key
         # Determine the raw and additional fields
-        cols_fund = self.d.get_fields_names(self.fund)
-        cols_names = self.d.get_fields_names(self.names)
+        cols_fund = self.get_fields_names(self.fund)
+        cols_names = self.get_fields_names(self.names)
         fields = [f for f in fields if f not in key]
         # fields_toc = [f for f in fields if (f not in fund_raw and
         #                                     f not in names_raw)]
         # Keep the full compustat key (to correctly compute lags)
-        df = self.d.open_data(self.fund, key).drop_duplicates()
+        df = self.open_data(self.fund, key).drop_duplicates()
         # Get additional fields first (to ensure overwritten fields)
         fields_add = []
         for f in fields:
@@ -615,6 +615,8 @@ class comp(data_module):
             for i in r:
                 rs = rs + [i]
         # Remove missing values
+        ## sic field is text with 'None' when missing
+        df.loc[df.sic=='None'] = np.nan
         df = df.dropna()
         # Convert sic field to Integer
         df.sic = df.sic.astype(int)

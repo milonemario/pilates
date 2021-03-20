@@ -9,7 +9,7 @@ as Compustat, CRSP, IBES, FRED, etc.
 """
 
 # import sys
-import os
+import os, sys, getpass, stat
 import pathlib
 import yaml
 import numpy as np
@@ -18,6 +18,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import multiprocessing as mp
 import importlib
+import psycopg2
 # import dask.dataframe as dd
 
 # Remove warning messages for chained assignments
@@ -26,6 +27,93 @@ pd.options.mode.chained_assignment = None
 # Directories
 _types_dir = os.path.dirname(__file__)+'/types/'
 _modules_dir = os.path.dirname(__file__)+'/modules/'
+
+# WRDS Database Connection
+WRDS_POSTGRES_HOST = 'wrds-pgdata.wharton.upenn.edu'
+WRDS_POSTGRES_PORT = 9737
+WRDS_POSTGRES_DB = 'wrds'
+
+####################
+# Global functions #
+####################
+
+def check_duplicates(df, key, description=''):
+    """ Check duplicates and print a message if needed.
+
+    Args:
+        df (pandas.DataFrame): DataFrame.
+        key (list): Columns that should disp;lay no duplicates.
+        description (str, optional): String to include in the warning message
+
+    """
+    n_dup = df.shape[0] - df[key].drop_duplicates().shape[0]
+    if n_dup > 0:
+        print("Warning: The data {:} contains {:} \
+              duplicates".format(description, n_dup))
+
+def correct_columns_types(df, types=None):
+    """ Apply the correct data type to all known columns.
+    Known columns are listed in the files contained in the folder 'types'.
+    A custom type file can be provided by the user.
+
+    Args:
+        df (pandas.DataFrame): DataFrame.
+        types (str, optional): Path of the Yaml file containing the fields
+            types of the data.
+
+    """
+
+    def get_changes(path):
+        with open(path) as f:
+            t = yaml.full_load(f)
+            # Create the final type list
+            types_list1 = {}  # Convert to float before Int64
+            types_list2 = {}
+            for k, l in t.items():
+                for v in l:
+                    types_list1[v] = k
+                    types_list2[v] = k
+                    if k in ['Int64', 'Int32']:
+                        types_list1[v] = 'float'
+        # Select the common columns
+        cols_df = df.columns
+        cols_change = [v for v in cols_df if v in types_list2.keys()]
+        types_list_ch1 = {k: types_list1[k] for k in cols_change}
+        types_list_ch2 = {k: types_list2[k] for k in cols_change
+                          if types_list2[k] in ['Int64', 'Int32']}
+        return([types_list_ch1, types_list_ch2])
+
+    def apply_changes(ch):
+        # Apply the date and non-date types separately
+        chd = {k: v for k, v in ch.items() if v == 'date'}
+        chnd = {k: v for k, v in ch.items() if v != 'date'}
+        # Apply the non-dates
+        if len(chnd) > 0:
+            df.loc[:, chnd.keys()] = df[chnd.keys()].astype(chnd)
+        # Apply the dates
+        if len(chd) > 0:
+            for k in chd.keys():
+                df.loc[:, k] = pd.to_datetime(df[k]).dt.date
+                df.loc[df[k].isna(), k] = np.nan
+
+    # First use the predefined types
+    for fname in os.listdir(_types_dir):
+        name, ext = os.path.splitext(fname)
+        if ext == '.yaml':
+            path = _types_dir+fname
+            changes = get_changes(path)
+            for ch in changes:
+                apply_changes(ch)
+    # Then use the user provided types
+    if types is not None:
+        changes = get_changes(types)
+        for ch in changes:
+            apply_changes(ch)
+    return(df)
+
+##############
+# Main Class #
+##############
 
 class data:
     """ Main class of pilates.
@@ -36,11 +124,11 @@ class data:
 
     """
 
-    def __init__(self, datadir=None):
+    def __init__(self, datadir=None, chunksize=500000):
         self.datadir = None
         if datadir is not None:
             self.set_data_directory(datadir)
-        self.chunksize = 10000
+        self.chunksize = chunksize
         self.cores = mp.cpu_count()
         # Add the different modules
         for m in os.listdir(_modules_dir):
@@ -177,6 +265,7 @@ class data:
 
     def open_data(self, name, columns=None, types=None):
         """ Open the data.
+        Only return data from locally stored files.
 
         Args:
             name (str or pandas.DataFrame):
@@ -189,16 +278,14 @@ class data:
                 types of the data.
 
         Returns:
-            padas.DataFrame: DataFrame with the required columns.
+            pandas.DataFrame: DataFrame with the required columns.
 
         """
         if isinstance(name, pd.DataFrame):
             # If the name refers to a pandas DataFrame, just return it
             df = name[columns]
         else:
-            # Otherwise, open the file from disk
             self._check_data_dir()
-            # Open the parquet file and convert it to a pandas DataFrame
             filename_pq = self.datadir+name+'.parquet'
             t = pq.read_table(filename_pq, columns=columns)
             df = t.to_pandas()
@@ -206,7 +293,8 @@ class data:
         return df
 
     def get_fields_names(self, name):
-        """ Get the fields names.
+        """ Get the fields names of the file.
+        Only returns fields from locally stored files.
 
         Args:
             name (str or pandas.DataFrame):
@@ -277,6 +365,10 @@ class data:
         """
         self.cores = cores
 
+#############################
+# General class for modules #
+#############################
+
 class data_module:
     """ Class inherited by all the modules used to process the data.
 
@@ -290,7 +382,31 @@ class data_module:
     """
 
     def __init__(self, d):
+        # Provide access to the main data class
         self.d = d
+        # By default, modules use local files
+        self.remote_access = False
+        # Get informations on files supported by the module
+        path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
+        if os.path.exists(path_files):
+            with open(path_files) as f:
+                self.files = yaml.full_load(f)
+        else:
+            self.files = None
+
+    def _check_name(self, name):
+        """ Check that the file name is allowed for that module.
+        For example, the module for COMPUSTAT (comp) only handles certain files
+        such as 'funda', 'fundq', 'names'.
+
+        Args:
+            name (str): Name of the file to be used by the module.
+        """
+        if self.files is not None:
+            if name not in self.files.keys():
+                raise Exception("The file name provided is incorrect. ",
+                                "This module supports the following files: ",
+                                str(list(self.files.keys())))
 
     def add_file(self, name, path, force=False, types=None):
         """ Add a file to the module.
@@ -305,8 +421,70 @@ class data_module:
                 types of the data.
 
         """
+        # Check the file name (if it is part of the allowed files)
+        self._check_name(name)
         f = self.d.convert_data(path, force)
         setattr(self, name, f)
+
+    def open_data(self, name, columns=None, types=None):
+        """ Open the data.
+        If the module is set to use remote files, update local files accordingly.
+        Otherwise, use local files.
+
+        Args:
+            name (str or pandas.DataFrame):
+                Either the name of the file to open or a DataFrame.
+                When a name is given, the file must have been converted using
+                convert_data().
+            columns (list, optional): Columns to keep. If None, returns all
+                the columns. Defaults to None.
+            types (str, optional): Path of the Yaml file containing the fields
+                types of the data.
+
+        Returns:
+            pandas.DataFrame: DataFrame with the required columns.
+
+        """
+
+        if (self.remote_access and
+           not isinstance(name, pd.DataFrame) and
+           columns is not None):
+            # Update or create the file on disk
+            missing_fields = columns.copy()
+            # Check that a data directory has been provided
+            self.d._check_data_dir()
+            filename_pq = self.d.datadir+name+'.parquet'
+            # Check if there is a file on disk to be used
+            if os.path.exists(filename_pq):
+                # If the file exists, update the missing fields
+                local_fields = self.d.get_fields_names(name)
+                for c in columns:
+                    if c in local_fields:
+                        missing_fields.remove(c)
+            # Update or create the file on disk
+            if len(missing_fields) > 0:
+                self.add_fields_to_file(name, missing_fields)
+        # The file on disk should be good to use now.
+        return self.d.open_data(name, columns, types)
+
+    def get_fields_names(self, name):
+        """ Get the fields names of the file.
+        If module is set to use remote files, get all remote fields.
+        Otherwise return fields from local files.
+
+        Args:
+            name (str or pandas.DataFrame):
+                Either the path of the parquet file to open or a DataFrame.
+
+        Returns:
+            list: List containing the fields names.
+
+        """
+
+        if self.remote_access:
+            return self.get_remote_fields_names(name)
+        else:
+            return self.d.get_fields_names(name)
 
     def get_lag(self, data, lag, fields=None, col_id=None, col_date=None):
         """ Return the lag of the columns in the data (or the fields if
@@ -338,80 +516,310 @@ class data_module:
         else:
             return(data[fields])
 
-####################
-# Global functions #
-####################
+##########################
+# Class for WRDS modules #
+##########################
 
-def check_duplicates(df, key, description=''):
-    """ Check duplicates and print a message if needed.
-
-    Args:
-        df (pandas.DataFrame): DataFrame.
-        key (list): Columns that should disp;lay no duplicates.
-        description (str, optional): String to include in the warning message
-
-    """
-    n_dup = df.shape[0] - df[key].drop_duplicates().shape[0]
-    if n_dup > 0:
-        print("Warning: The data {:} contains {:} \
-              duplicates".format(description, n_dup))
-
-def correct_columns_types(df, types=None):
-    """ Apply the correct data type to all known columns.
-    Known columns are listed in the files contained in the folder 'types'.
-    A custom type file can be provided by the user.
-
-    Args:
-        df (pandas.DataFrame): DataFrame.
-        types (str, optional): Path of the Yaml file containing the fields
-            types of the data.
+class wrds_module(data_module):
+    """ Module class for all modules that use WRDS data.
 
     """
 
-    def get_changes(path):
-        with open(path) as f:
-            t = yaml.full_load(f)
-            # Create the final type list
-            types_list1 = {}  # Convert to float before Int64
-            types_list2 = {}
-            for k, l in t.items():
-                for v in l:
-                    types_list1[v] = k
-                    types_list2[v] = k
-                    if k in ['Int64', 'Int32']:
-                        types_list1[v] = 'float'
-        # Select the common columns
-        cols_df = df.columns
-        cols_change = [v for v in cols_df if v in types_list2.keys()]
-        types_list_ch1 = {k: types_list1[k] for k in cols_change}
-        types_list_ch2 = {k: types_list2[k] for k in cols_change
-                          if types_list2[k] in ['Int64', 'Int32']}
-        return([types_list_ch1, types_list_ch2])
+    def __init__(self, d):
+        data_module.__init__(self, d)
 
-    def apply_changes(ch):
-        # Apply the date and non-date types separately
-        chd = {k: v for k, v in ch.items() if v == 'date'}
-        chnd = {k: v for k, v in ch.items() if v != 'date'}
-        # Apply the non-dates
-        if len(chnd) > 0:
-            df.loc[:, chnd.keys()] = df[chnd.keys()].astype(chnd)
-        # Apply the dates
-        if len(chd) > 0:
-            for k in chd.keys():
-                df.loc[:, k] = pd.to_datetime(df[k]).dt.date
-                df.loc[df[k].isna(), k] = np.nan
+    def set_remote_access(self, remote_access, wrds_username=None):
+        self.remote_access = remote_access
+        # WRDS Library
+        self.wrds_username = wrds_username
+        self.library = self.files['wrds']['library']
+        if self.remote_access:
+            # First create a pgpass file for subsequent connections
+            self.create_pgpass_file()
+            print('Connecting to WRDS library {} ... '.format(self.library), end='', flush=True)
+            # self.connwrds = wrds.Connection(wrds_username = wrds_username)
+            self.conn = psycopg2.connect("host={} dbname={} user={} port={}".format(WRDS_POSTGRES_HOST,
+                WRDS_POSTGRES_DB, wrds_username, WRDS_POSTGRES_PORT))
+            self.views = self.__get_view_names();
+            self.tables = self.__get_table_names();
+            print('established.')
+            # Add all files supported by the module
+            path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
+            with open(path_files) as f:
+                names = yaml.full_load(f)
+                for name in names.keys():
+                    setattr(self, name, name)
 
-    # First use the predefined types
-    for fname in os.listdir(_types_dir):
-        name, ext = os.path.splitext(fname)
-        if ext == '.yaml':
-            path = _types_dir+fname
-            changes = get_changes(path)
-            for ch in changes:
-                apply_changes(ch)
-    # Then use the user provided types
-    if types is not None:
-        changes = get_changes(types)
-        for ch in changes:
-            apply_changes(ch)
-    return(df)
+    def get_remote_fields_names(self, name):
+        """ Obtain the fields of the file 'name' from WRDS postgresql data.
+
+        """
+        table = self.files[name]['table']
+        sqlstmt = ('SELECT * FROM {schema}.{table} LIMIT 0;'.format(
+                   schema=self.library,
+                   table=table))
+        cursor = self.conn.cursor()
+        cursor.execute(sqlstmt)
+        cols = [desc[0] for desc in cursor.description]
+        cursor.close()
+        return cols
+
+    def add_fields_to_file(self, name, fields):
+        # Get the missing fields
+        table = self.files[name]['table']
+        print('Downloading fields '+str(fields)+' for module',
+              self.__class__.__name__+', table '+table+' from WRDS ... ')
+        # Open and update existing file if any
+        filename_pq = self.d.datadir+name+'.parquet'
+        file_exists = False
+        if os.path.exists(filename_pq):
+            file_exists = True
+            pqf = pq.ParquetFile(filename_pq)
+        filename_pq_new = filename_pq + '_new'
+
+        # Get approximate row count
+        nrows = self.get_row_count(table)
+        #print('Number of rows (approximation): {}'.format(nrows))
+        # SQL query
+        cols = ','.join(fields)
+        sqlstmt = ('SELECT {cols} FROM {schema}.{table};'.format(
+                   cols=cols,
+                   schema=self.library,
+                   table=table))
+        # Read the SQL table by chunks
+        #print('Get SQL table by chunk')
+        cursor = self.conn.cursor(name='mycursor')
+        cursor.itersize = self.d.chunksize
+        cursor.execute(sqlstmt)
+        more_data = True
+        i = 0
+        while more_data:
+            chunk = cursor.fetchmany(cursor.itersize)
+            dfsql = pd.DataFrame(chunk, columns=fields)
+            if file_exists:
+                df = pqf.read_row_group(i).to_pandas()
+                # Merge old and new data
+                df[fields] = dfsql
+            else:
+                df = dfsql
+            if i == 0:
+                t = pa.Table.from_pandas(df)
+                pqschema = t.schema
+                pqwriter = pq.ParquetWriter(filename_pq_new, t.schema)
+            else:
+                t = pa.Table.from_pandas(df, schema=pqschema)
+            pqwriter.write_table(t)
+            i += 1
+            if len(df) < self.d.chunksize:
+                more_data = False
+                print('Progress: Done')
+            else:
+                nobs = (i+1)*self.d.chunksize
+                print("Progress: {:2.0%}".format(nobs/float(nrows)), end='\r')
+        pqwriter.close()
+        cursor.close()
+        # Remove old file and rename new file
+        if file_exists:
+            os.remove(filename_pq)
+        os.rename(filename_pq_new, filename_pq)
+
+    ##### Replicate some wrds module functions #####
+    def __get_view_names(self):
+        sqlcode = "select viewname from pg_catalog.pg_views;"
+        with self.conn.cursor() as curs:
+            curs.execute(sqlcode)
+            views = curs.fetchall()
+            return [v[0] for v in views]
+
+    def __get_table_names(self):
+        sqlcode = "select tablename from pg_catalog.pg_tables;"
+        with self.conn.cursor() as curs:
+            curs.execute(sqlcode)
+            tables = curs.fetchall()
+            return [t[0] for t in tables]
+
+    def __get_schema_for_view(self, table):
+        """
+        Internal function for getting the schema based on a view
+        """
+        sql_code = """SELECT distinct(source_ns.nspname) AS source_schema
+                      FROM pg_depend
+                      JOIN pg_rewrite
+                        ON pg_depend.objid = pg_rewrite.oid
+                      JOIN pg_class as dependent_view
+                        ON pg_rewrite.ev_class = dependent_view.oid
+                      JOIN pg_class as source_table
+                        ON pg_depend.refobjid = source_table.oid
+                      JOIN pg_attribute
+                        ON pg_depend.refobjid = pg_attribute.attrelid
+                          AND pg_depend.refobjsubid = pg_attribute.attnum
+                      JOIN pg_namespace dependent_ns
+                        ON dependent_ns.oid = dependent_view.relnamespace
+                      JOIN pg_namespace source_ns
+                        ON source_ns.oid = source_table.relnamespace
+                      WHERE dependent_ns.nspname = '{schema}'
+                        AND dependent_view.relname = '{view}';
+                    """.format(schema=self.library, view=table)
+        with self.conn.cursor() as curs:
+            curs = self.conn.cursor()
+            curs.execute(sql_code)
+            return curs.fetchone()[0]
+
+    def get_row_count(self, table):
+        """
+            Uses the library and table to get the approximate
+              row count for the table.
+            :param library: Postgres schema name.
+            :param table: Postgres table name.
+            :rtype: int
+            Usage::
+            >>> db.get_row_count('wrdssec', 'dforms')
+            16378400
+        """
+        schema = self.library
+        if 'taq' in self.library:
+            print("The row count will return 0 due to the structure of TAQ")
+        else:
+            if table in self.views:
+                schema = self.__get_schema_for_view(table)
+        if schema:
+            sqlstmt = """
+                SELECT reltuples
+                  FROM pg_class r
+                  JOIN pg_namespace n
+                    ON (r.relnamespace = n.oid)
+                  WHERE r.relkind in ('r', 'f')
+                    AND n.nspname = '{}'
+                    AND r.relname = '{}';
+                """.format(schema, table)
+
+            try:
+                with self.conn.cursor() as curs:
+                    curs.execute(sqlstmt)
+                    return int(curs.fetchone()[0])
+            except Exception as e:
+                print(
+                    "There was a problem with retrieving"
+                    "the row count: {}".format(e))
+                return 0
+        else:
+            print("There was a problem with retrieving the schema")
+            return None
+
+    def create_pgpass_file(self):
+        """
+        Create a .pgpass file to store WRDS connection credentials..
+        """
+
+        if not self.wrds_username:
+            self.wrds_username = input("Enter your WRDS username:")
+        if (sys.platform == 'win32'):
+            pgfile = self.__pgpass_file_win32()
+        else:
+            pgfile = self.__pgpass_file_unix()
+        if not self.__pgpass_exists(pgfile):
+            self._wrds_passwd = getpass.getpass('Enter your WRDS password:')
+            self.__write_pgpass_file(pgfile)
+
+    def __pgpass_file_win32(self):
+        """
+        Create a pgpass.conf file on Windows.
+        Windows is different enough from everything else
+          as to require its own special way of doing things.
+        Save the pgpass file in %APPDATA%\postgresql as 'pgpass.conf'.
+        """
+        appdata = os.getenv('APPDATA')
+        pgdir = appdata + os.path.sep + 'postgresql'
+        # Can we at least assume %APPDATA% always exists? I'm seriously asking.
+        if (not os.path.exists(pgdir)):
+            os.mkdir(pgdir)
+        # Path exists, but is not a directory
+        elif (not os.path.isdir(pgdir)):
+            err = ("Cannot create directory {}: "
+                   "path exists but is not a directory")
+            raise FileExistsError(err.format(pgdir))
+        pgfile = pgdir + os.path.sep + 'pgpass.conf'
+        return pgfile
+
+    def __pgpass_file_unix(self):
+        """
+        Create a .pgpass file on Unix-like operating systems.
+        Permissions on this file must also be set on Unix-like systems.
+        This function works on Mac OS X and Linux.
+        It should work on Solaris too, but this is untested.
+        """
+        homedir = os.getenv('HOME')
+        pgfile = homedir + os.path.sep + '.pgpass'
+        if (os.path.isfile(pgfile)):
+            # Set it to mode 600 (rw-------) so we can write to it
+            os.chmod(pgfile, stat.S_IRUSR | stat.S_IWUSR)
+        # Set it to mode 400 (r------) to protect it
+        os.chmod(pgfile, stat.S_IRUSR)
+        return pgfile
+
+    def __write_pgpass_file(self, pgfile):
+        """
+        Write the WRDS connection info to the pgpass file
+          without clobbering other connection strings.
+        Also escape any ':' characters in passwords,
+          as .pgpass requires.
+        Works on both *nix and Win32.
+        """
+        pgpass = "{host}:{port}:{dbname}:{user}:{passwd}"
+        passwd = self._wrds_passwd
+        passwd = passwd.replace(':', '\:')
+        # Avoid clobbering the file if it exists
+        if (os.path.isfile(pgfile)):
+            with open(pgfile, 'r') as fd:
+                lines = fd.readlines()
+            newlines = []
+            for line in lines:
+                # Handle escaped colons, preventing
+                #  split() from splitting on them.
+                # Saving to a new variable here absolves us
+                #  of having to re-replace the substituted ##COLON## later.
+                oldline = line.replace("""\:""", '##COLON##')
+                fields = oldline.split(':')
+                # On finding a line matching the hostname, port and dbname
+                #  we replace it with the new pgpass line.
+                # Surely we won't have any colons in these fields :^)
+                if (fields[0] == self._hostname and
+                        int(fields[1]) == self._port and
+                        fields[2] == self._dbname):
+                    newline = pgpass.format(
+                        host=WRDS_POSTGRES_HOST,
+                        port=WRDS_POSTGRES_PORT,
+                        dbname=WRDS_POSTGRES_DB,
+                        user=self.wrds_username,
+                        passwd=passwd)
+                    newlines.append(newline)
+                else:
+                    newlines.append(line)
+            lines = newlines
+        else:
+            line = pgpass.format(
+                host=WRDS_POSTGRES_HOST,
+                port=WRDS_POSTGRES_PORT,
+                dbname=WRDS_POSTGRES_DB,
+                user=self.wrds_username,
+                passwd=passwd)
+            lines = [line]
+        # I lied, we're totally clobbering it:
+        with open(pgfile, 'w') as fd:
+            fd.writelines(lines)
+            fd.write('\n')
+
+    def __pgpass_exists(self, pgfile):
+        if (os.path.isfile(pgfile)):
+            with open(pgfile, 'r') as fd:
+                lines = fd.readlines()
+            newlines = []
+            for line in lines:
+                oldline = line.replace("""\:""", '##COLON##')
+                fields = oldline.split(':')
+                if (fields[0] == WRDS_POSTGRES_HOST and
+                        int(fields[1]) == WRDS_POSTGRES_PORT and
+                        fields[2] == WRDS_POSTGRES_DB):
+                    return True
+        else:
+            return False

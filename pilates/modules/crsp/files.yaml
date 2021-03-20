@@ -1,0 +1,27 @@
+##################
+# Files for CRSP #
+##################
+
+# Library (schema) on WRDS Postgresql database
+wrds:
+  library: crsp
+
+# Compustat-CRSP link table
+linktable:
+  table: ccmxpf_lnkhist
+
+# Monthly Stock File
+msf:
+  table: msf
+
+# Daily Stock File
+dsf:
+  table: dsf
+
+# Stock-Market Indexes Daily
+dsi:
+  table: dsi
+
+# Daily Stock Events
+dse:
+  table: dse

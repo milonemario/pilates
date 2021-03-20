@@ -1,0 +1,19 @@
+########################
+# Files for COMPUSTAT  #
+########################
+
+# Library (schema) on WRDS Postgresql database
+wrds:
+  library: comp
+
+# Firm informations (SIC, ...)
+names:
+  table: names
+
+# Fundamental Annual data
+funda:
+  table: funda
+
+# Fundamental Quarterly data
+fundq:
+  table: fundq

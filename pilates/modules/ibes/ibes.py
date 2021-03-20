@@ -8,14 +8,14 @@ import pandas as pd
 # import numpy as np
 # from fuzzywuzzy import fuzz
 from rapidfuzz import fuzz
-from pilates import data_module
+from pilates import wrds_module
 from pandas.tseries.offsets import MonthEnd
 
 
-class ibes(data_module):
+class ibes(wrds_module):
 
     def __init__(self, d):
-        data_module.__init__(self, d)
+        wrds_module.__init__(self, d)
         # Initialize values
         self.scores = [0, 1, 4]
         self.col_ticker = 'ticker'
@@ -103,7 +103,7 @@ class ibes(data_module):
         #########################
         # 1.1 IBES: Get the list of IBES Tickers for US firms in IBES
         cols = ['ticker', 'cusip', 'cname', 'sdates']
-        _ibes1 = self.d.open_data(self.id, cols)
+        _ibes1 = self.open_data(self.id, cols)
         # Create first and last 'start dates' for a given cusip
         # Use agg min and max to find the first and last date per group
         # then rename to fdate and ldate respectively
@@ -115,7 +115,7 @@ class ibes(data_module):
         _ibes2 = _ibes1[_ibes1.sdates == _ibes1.ldate].drop(['sdates'], axis=1)
         # 1.2 CRSP: Get all permno-ncusip combinations
         cols = ['permno', 'ncusip', 'comnam', 'namedt', 'nameenddt']
-        _crsp1 = self.d.open_data(self.d.crsp.stocknames, cols)
+        _crsp1 = self.open_data(self.d.crsp.stocknames, cols)
         g = _crsp1.groupby(['permno', 'ncusip'])
         # First namedt and last nameenddt
         _crsp1['fnamedt'] = g.namedt.transform('min')
@@ -180,7 +180,7 @@ class ibes(data_module):
             .drop(['permno'], axis=1).drop_duplicates()
         # Add IBES identifying information
         cols = ['ticker', 'cname', 'oftic', 'sdates', 'cusip']
-        ibesid = self.d.open_data(self.id, cols)
+        ibesid = self.open_data(self.id, cols)
         ibesid = ibesid.loc[ibesid.oftic.notna()]
         _nomatch2 = pd.merge(_nomatch1, ibesid, how='inner', on=['ticker'])
         # Create first and last 'start dates' for Exchange Tickers
@@ -191,7 +191,7 @@ class ibes(data_module):
         _nomatch3 = _nomatch2[_nomatch2.sdates == _nomatch2.ldate]
         # Get entire list of CRSP stocks with Exchange Ticker information
         cols = ['ticker', 'comnam', 'permno', 'ncusip', 'namedt', 'nameenddt']
-        _crsp_n1 = self.d.open_data(self.d.crsp.stocknames, cols)
+        _crsp_n1 = self.open_data(self.d.crsp.stocknames, cols)
         _crsp_n1 = _crsp_n1[_crsp_n1.ticker.notna()]
         # Arrange effective dates for link by Exchange Ticker
         g = _crsp_n1.groupby(['permno', 'ticker'])
@@ -247,7 +247,7 @@ class ibes(data_module):
         # Add the necessary columns to process the data
         cols = ['ticker', 'spdates', 'adj']
         # Open adjustment factors data
-        df_adj = self.d.open_data(self.adj, cols)
+        df_adj = self.open_data(self.adj, cols)
         # Select the firms that have at least one split
         c = df_adj.groupby('ticker').count()['adj'].reset_index()
         t = c[c.adj > 1]['ticker']
@@ -274,7 +274,7 @@ class ibes(data_module):
             self.adj -- Data from the IBES 'det_adj' file (adjustments file)
         """
         key = ['ticker', 'fpedats']
-        dfu = self.d.open_data(data, key).drop_duplicates()
+        dfu = self.open_data(data, key).drop_duplicates()
         adjfac = self._adjustmentfactors_table()
         # Add all the fpedats to all the tickers in the adjustment file
         # Ideally we would like to do a conditional merge
@@ -284,7 +284,7 @@ class ibes(data_module):
         m = m[m.fpedats < m.enddt]
         m = m.drop(['startdt', 'enddt'], axis=1)
         # Merge the adjustment factors to the user data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         index = dfu.index
         dfin = dfu.merge(m, how='left', on=key)
         # Replace null by 1 (adjustment factors)
@@ -311,7 +311,7 @@ class ibes(data_module):
         """
         # Add the permno
         key = ['gvkey', 'datadate']
-        df = self.d.open_data(data, key).drop_duplicates().dropna()
+        df = self.open_data(data, key).drop_duplicates().dropna()
         df['permno'] = self.d.crsp.permno_from_gvkey(df)
         # Add the IBES ticker
         # Get the IBES-CRSP link table
@@ -353,7 +353,7 @@ class ibes(data_module):
             print("Warning: The merged ticker",
                   "contains {:} duplicates".format(n_dup))
         # Merge with user data and return
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(match, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.ticker)
@@ -365,12 +365,12 @@ class ibes(data_module):
             data -- User data.
                     Required columns: [ticker, 'col_fpedats']
         """
-        df = self.d.open_data(self.det, ['ticker',
+        df = self.open_data(self.det, ['ticker',
                                          'fpedats']).drop_duplicates()
         dt = pd.to_datetime(df.fpedats).dt
         df['yr'] = dt.year
         df['mon'] = dt.month
-        dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+        dfu = self.open_data(data, ['ticker', self.col_fpedats])
         dt = pd.to_datetime(dfu[self.col_fpedats]).dt
         dfu['yr'] = dt.year
         dfu['mon'] = dt.month
@@ -383,22 +383,22 @@ class ibes(data_module):
         """ Return the fields from the det file filtered. """
         key = ['ticker', 'fpedats']
         # Filter measure
-        det = self.d.open_data(self.det, ['measure'])
+        det = self.open_data(self.det, ['measure'])
         kmeasure = det.measure == self.measure
         # Filter usfirm
-        det = self.d.open_data(self.det, ['usfirm'])
+        det = self.open_data(self.det, ['usfirm'])
         kusfirm = det.usfirm == self.usfirm
         # Filter fpi
-        det = self.d.open_data(self.det, ['fpi'])
+        det = self.open_data(self.det, ['fpi'])
         kfpi = det.fpi.isin(self.fpis)
         # Filter pdf (Primary / Diluted)
         if self.pdf == 'All':
             kpdf = True
         elif self.pdf == 'P' or self.pdf == 'D':
-            det = self.d.open_data(self.det, ['pdf'])
+            det = self.open_data(self.det, ['pdf'])
             kpdf = det.pdf == self.pdf
         elif self.pdf == 'DP':
-            det = self.d.open_data(self.det, key+['pdf'])
+            det = self.open_data(self.det, key+['pdf'])
             pdfd = det.pdf == 'D'
             pdfp = det.pdf == 'P'
             detk = det[key].drop_duplicates()
@@ -417,7 +417,7 @@ class ibes(data_module):
             kpdf = (det.pdf == 'D') | det.PnotD
         # Create the final filter
         mask = kmeasure & kusfirm & kfpi & kpdf
-        det = self.d.open_data(self.det, fields)
+        det = self.open_data(self.det, fields)
         det = det[mask].drop_duplicates()
         # Unadjust the values if needed (value, actual)
         if fields is not None and self.unadjust:
@@ -429,7 +429,7 @@ class ibes(data_module):
     def _get_fields_guidance(self, fields=None):
         """ Return the fields from the guidance file filtered. """
         cols = ['pdicity', 'measure', 'usfirm', 'units', 'prd_yr', 'prd_mon']
-        df = self.d.open_data(self.guidance, cols+fields)
+        df = self.open_data(self.guidance, cols+fields)
         # Keep quarterly EPS forecasts for US firms
         df = df[(df.pdicity == self.guidance_pdicity) &
                 (df.measure == self.measure) &
@@ -523,17 +523,17 @@ class ibes(data_module):
         key = ['ticker', 'prd_yr', 'prd_mon']
         # Prepare the user data for merge
         if self.col_fpedats in data_cols:
-            dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+            dfu = self.open_data(data, ['ticker', self.col_fpedats])
             dt = pd.to_datetime(dfu[self.col_fpedats]).dt
             dfu['prd_yr'] = dt.year
             dfu['prd_mon'] = dt.month
         elif 'fpedats' in data_cols:
-            dfu = self.d.open_data(data, ['ticker', 'fpedats'])
+            dfu = self.open_data(data, ['ticker', 'fpedats'])
             dt = pd.to_datetime(dfu.fpedats).dt
             dfu['prd_yr'] = dt.year
             dfu['prd_mon'] = dt.month
         else:  # For use when using guidance data
-            dfu = self.d.open_data(data, key)
+            dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+fields], how='left', on=key)
         dfin.index = dfu.index
         # Return the data
@@ -546,7 +546,7 @@ class ibes(data_module):
         # Get the earnings annoucements dates
         cols = ['ticker', 'fpedats', 'anndats_act', 'anntims_act',
                 'actdats_act', 'acttims_act']
-        # ea = self.d.open_data(self.det, cols)
+        # ea = self.open_data(self.det, cols)
         fields_det = [f for f in fields if f not in cols]
         ea = self._get_fields_det(cols+fields_det)
         ea = ea[ea.anndats_act.notna()].drop_duplicates()
@@ -592,13 +592,13 @@ class ibes(data_module):
         data_cols = self.d.get_fields_names(data)
         key = ['ticker', 'fpedats']
         if self.col_fpedats in data_cols:
-            dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+            dfu = self.open_data(data, ['ticker', self.col_fpedats])
             dfu['fpedats'] = dfu[self.col_fpedats]
         elif 'fpedats' in data_cols:
-            dfu = self.d.open_data(data, key)
+            dfu = self.open_data(data, key)
         else:  # For use when using guidance data
             key = ['ticker', 'prd_yr', 'prd_mon']
-            dfu = self.d.open_data(data, key)
+            dfu = self.open_data(data, key)
             dt = pd.to_datetime(ea.fpedats).dt
             ea['prd_yr'] = dt.year
             ea['prd_mon'] = dt.month
@@ -647,13 +647,13 @@ class ibes(data_module):
         data_cols = self.d.get_fields_names(data)
         key = ['ticker', 'fpedats']
         if self.col_fpedats in data_cols:
-            dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+            dfu = self.open_data(data, ['ticker', self.col_fpedats])
             dfu['fpedats'] = dfu[self.col_fpedats]
         elif 'fpedats' in data_cols:
-            dfu = self.d.open_data(data, key)
+            dfu = self.open_data(data, key)
         else:  # For use when using guidance data
             key = ['ticker', 'prd_yr', 'prd_mon']
-            dfu = self.d.open_data(data, key)
+            dfu = self.open_data(data, key)
             dt = pd.to_datetime(ea.fpedats).dt
             ea['prd_yr'] = dt.year
             ea['prd_mon'] = dt.month
@@ -693,13 +693,13 @@ class ibes(data_module):
         # data_cols = self.d.get_fields_names(data)
         # key = ['ticker', 'fpedats']
         # if self.col_fpedats in data_cols:
-        #     dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+        #     dfu = self.open_data(data, ['ticker', self.col_fpedats])
         #     dfu['fpedats'] = dfu[self.col_fpedats]
         # elif 'fpedats' in data_cols:
-        #     dfu = self.d.open_data(data, key)
+        #     dfu = self.open_data(data, key)
         # else:  # For use when using guidance data
         #     key = ['ticker', 'prd_yr', 'prd_mon']
-        #     dfu = self.d.open_data(data, key)
+        #     dfu = self.open_data(data, key)
         #     ea['prd_yr'] = ea.fpedats.dt.year
         #     ea['prd_mon'] = ea.fpedats.dt.month
         # dfin = dfu.merge(ea[key+['actual']], how='left', on=key)
@@ -746,7 +746,7 @@ class ibes(data_module):
         # Get the start and end date to compute the
         # consensus by (ticker, fpedats).
         key = ['ticker', self.col_fpedats]
-        cdt = self.d.open_data(data, key + [startdt, enddt]).drop_duplicates()
+        cdt = self.open_data(data, key + [startdt, enddt]).drop_duplicates()
         # Keep the rows for which a consensus can be computed
         cdt = cdt.dropna()
         # Add the fpedats for which the consensus should be computed
@@ -773,7 +773,7 @@ class ibes(data_module):
         c = c.rename({'value': 'consensus'}, axis=1)
         # Add the consensus to the user data
         key = ['ticker', 'fpedats']
-        dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+        dfu = self.open_data(data, ['ticker', self.col_fpedats])
         dfu['fpedats'] = dfu[self.col_fpedats]
         cons = dfu.merge(c[key+['consensus']], how='left', on=key)
         cons.index = dfu.index
@@ -807,18 +807,18 @@ class ibes(data_module):
         measures = ['PTG']
         if measure not in measures:
             raise Exception('Supported measures:', measures)
-        det = self.d.open_data(self.ptg, ['measure'])
+        det = self.open_data(self.ptg, ['measure'])
         kmeasure = det.measure == measure
         # Filter usfirm
-        det = self.d.open_data(self.ptg, ['usfirm'])
+        det = self.open_data(self.ptg, ['usfirm'])
         kusfirm = det.usfirm == self.usfirm
         # Filter horizon
-        det = self.d.open_data(self.ptg, ['horizon'])
+        det = self.open_data(self.ptg, ['horizon'])
         khorizon = det.horizon == horizon
         # Create the final filter
         mask = kmeasure & kusfirm & khorizon
         cols = ['ticker', 'value', 'anndats', 'anntims', 'amaskcd']
-        det = self.d.open_data(self.ptg, cols)
+        det = self.open_data(self.ptg, cols)
         det = det[mask].drop_duplicates()
         # Create a full timestamp for the forecasts
         det.anntims = pd.to_timedelta(det.anntims, unit='s')
@@ -859,148 +859,9 @@ class ibes(data_module):
         df = self._get_fields_det(key+['analys'])
         na = df.groupby(key).analys.nunique().reset_index(name='numanalys')
         # Merge to the user data
-        dfu = self.d.open_data(data, ['ticker', self.col_fpedats])
+        dfu = self.open_data(data, ['ticker', self.col_fpedats])
         dfu['fpedats'] = dfu[self.col_fpedats]
         numan = dfu.merge(na, how='left', on=key)
         numan.index = dfu.index
         # Return the consensus
         return(numan.numanalys.astype('float32'))
-
-##############
-# OLDER CODE #
-##############
-
-
-def _adjustmentfactors(w, file_adj):
-    """ Create an adjustment factor table with a start and end date
-    for each factor."""
-    # Add the necessary columns to process the data
-    cols = ['ticker', 'spdates', 'adj']
-    # Open adjustment factors data
-    df_adj = w.open_data(file_adj, cols)
-    # Select the firms that have at least one split
-    df_ticker = df_adj.groupby(['ticker'])['ticker'].count(). \
-        to_frame('ticker_counts')
-    df_ticker = df_ticker[(df_ticker['ticker_counts'] > 1)].reset_index()
-    ticker_list = df_ticker['ticker'].to_list()
-    # Create the new adjustment table
-    df_ticker = df_ticker.sort_values(by=['ticker', 'spdates'],
-                                      ascending=[1, 0]).reset_index()
-    tickers = df_adj['ticker'].unique()
-    list_idx = []
-    for i in range(0, len(tickers)):
-        if tickers[i] in ticker_list:
-            idx = ticker_list.index(tickers[i])
-            list_idx.append(idx)
-    df = pd.merge(df_ticker, df_adj, on='ticker')
-    df['enddt'] = ''
-    df['startdt'] = ''
-    # Solution 1 (Set all dates first, then change first occurrences to 0)
-    #   for i in range (1,len(df)):
-    #        df['enddt'][i] = df['spdates'][i-1]
-    #        df['startdt'][i] = df['spdates'][i]
-    #   for i in l:
-    #       df['enddt'][i] = 0
-    #       df['startdt'][i] = 0
-    # Solution 2 (Set first occurrences to 0, then set all other dates)
-    # for i in l:
-    #     df['enddt'][i] = 0
-    #     df['startdt'][i] = 0
-    for i in range(1, len(df)):
-        if df['enddt'][i] == 0:
-            continue
-        else:
-            df['enddt'][i] = df['spdates'][i - 1]
-            df['startdt'][i] = df['spdates'][i]
-    return df
-
-
-# Create a statistics table that includes:
-# -numanalys    Number of distinct analysts by firm-forecast period
-
-def numanalys(w, file_det):
-    """Return the number of analysts for each (itic, fpedats)."""
-    # Open the det file with the necessary fields
-    cols = ['ticker', 'fpedats', 'analys']
-    det = w.open_data(file_det, cols)
-    # Count number of analysis
-    df = det.groupby(['ticker', 'fpedats'])['analys'].nunique().reset_index()
-    df.rename(columns={'analys': 'numanalys'}, inplace=True)
-
-    return df
-
-
-def consensus(w, file_det, file_adjfactors=None, file_adj=None, start_date=[],
-              end_date=[]):
-    """Compute the consensus from individual analysts estimates."""
-    # Open the det file with the necessary fields
-    cols = ['ticker', 'usfirm', 'curr_act', 'measure', 'fpi', 'actual',
-            'fpedats']
-    det = w.open_data(file_det, cols)
-    # Opent the adjustment factors file
-    if file_adjfactors is not None:
-        adjfactors = w.open_data(file_adjfactors)
-    elif file_adj is not None:
-        # Need to compute the adustment factors
-        adjfactors = _adjustmentfactors(file_adj)
-    elif file_adj is None:
-        raise Exception("Please provide either the adjustment factor file",
-                        " or the adjustment file from IBES.")
-
-    """Fetch analysts forecasts"""
-    # Keep quarterly (fpi={6,7,8}) diluted EPS (pdf=D)
-    det = det[(det['usfirm'] == 1) & (det['curr_act'] == 'USD') &
-              (det['measure'] == 'EPS') & (det['fpi'].isin(['6', '7', '8', '9',
-                                                            'N', 'O', 'P', 'Q',
-                                                            'R', 'S', 'T', 'L',
-                                                            'Y']))]. \
-        reset_index(drop=True)
-    det = det.dropna(subset=['actual'])
-    dt = pd.to_datetime(det.fpedats).dt
-    det['fpeyr'] = dt.year
-    det['fpemon'] = dt.month
-    # Rename dataframe to improve code readability
-    df_afc = det
-
-    """Fetch the adjustment factors"""
-    # Filter the adjustment data
-    adjfactors = adjfactors[(adjfactors['usfirm'] == 1)].reset_index(drop=True)
-    # Rename dataframe to improve code readability
-    df_adj = adjfactors
-
-    df_afc = df_afc.sort_values(by=['ticker', 'fpedats'],
-                                ascending=[1, 1]).reset_index()
-
-    # Merge the adjustement factors
-    df = pd.merge(df_afc, df_adj, on='ticker')
-
-    # Filter data btw start and end dates, then compute unadjusted estimates
-    # Filter data for forecast period end dates
-    # between start date(included) and end date(not included)
-    start_date = ['startdt']
-    end_date = ['enddt']
-    df = df[(df['fpedats'] >= df[start_date]) & (
-            df['fpedats'] < df[end_date])]
-    # Complete the missing ones
-    df['adj'] = df['adj'].fillna(1)
-    # Compute the unadjusted estimates and eps
-    df['uest'] = df['est'] * df['adj']
-    df['ueps'] = df['eps'] * df['adj']
-
-    return df['ticker', 'fpedats', 'startdt', 'enddt', 'est', 'ueps']
-
-
-def merge_consensus_stats(w, file_ibes_consesus, file_ibes_stats, columns):
-    """Merge the consensus and the statistics"""
-    # Add the necessary columns to process the data
-    cols_req = ['ticker', 'fpedats']
-    cols = cols_req + list(set(columns) - set(cols_req))
-
-    # Open data
-    df_ibes_consesus = w.open_data(file_ibes_consesus, cols)
-    df_ibes_stats = w.open_data(file_ibes_stats, cols)
-
-    # Merge the two datasets on 'itic' and 'fpedats'
-    df_ibes = pd.merge(df_ibes_consesus, df_ibes_stats, on=['itic', 'fpedats'])
-
-    return df_ibes

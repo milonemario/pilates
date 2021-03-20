@@ -88,9 +88,9 @@ class jln(data_module):
         key = ['year', 'month']
         jlnfile = getattr(self, self.type)
 
-        df = self.d.open_data(jlnfile, key+fields)
+        df = self.open_data(jlnfile, key+fields)
         # Merge to the user data
-        dfu = self.d.open_data(data, [self.d.col_date])
+        dfu = self.open_data(data, [self.d.col_date])
         # Extract year and month from user data
         dt = pd.to_datetime(dfu[self.d.col_date]).dt
         dfu['year'] = dt.year

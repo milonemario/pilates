@@ -89,12 +89,12 @@ class epu(data_module):
                 key = ['permno', 'year']
                 data_key = ['permno', self.d.col_date]
 
-        df = self.d.open_data(epuname, key+fields)
+        df = self.open_data(epuname, key+fields)
         if self.level == 'firm':
             # 2 duplicates on that file at locs [29196, 52509]
             df = df.drop([29196, 52509])
         # Merge to the user data
-        dfu = self.d.open_data(data, data_key)
+        dfu = self.open_data(data, data_key)
         # Extract year and month from user data
         dt = pd.to_datetime(dfu[self.d.col_date]).dt
         dfu['year'] = dt.year

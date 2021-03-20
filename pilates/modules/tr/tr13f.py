@@ -1,15 +1,15 @@
 """
-Provides classes and functions to process Thomson Reuters data.
+Provides classes and functions to process Thomson Reuters data from WRDS.
 """
 
-from pilates import data_module
+from pilates import wrds_module
 import pandas as pd
 
 
-class tr13f(data_module):
+class tr13f(wrds_module):
 
     def __init__(self, d):
-        data_module.__init__(self, d)
+        wrds_module.__init__(self, d)
         # Initialize values
 
     def get_io_perc(self, data):
@@ -28,14 +28,14 @@ class tr13f(data_module):
                             (Manager)
             self.type3 --   Data from the TR s34 's34type3' file
                             (Stock Holdings)
-            self.d.crsp.msf --  CRSP 'msf' file (monthly stock file)
-            self.d.crsp.msenames -- CRSP 'msenames' file
+            self.crsp.msf --  CRSP 'msf' file (monthly stock file)
+            self.crsp.msenames -- CRSP 'msenames' file
         """
         ###############################################
         # Process the Holdings data (TR-13F S34type3) #
         ###############################################
         cols = ['fdate', 'mgrno', 'cusip', 'shares']
-        hol = self.d.open_data(self.type3, cols)
+        hol = self.open_data(self.type3, cols)
         # Add permno information
         hol['permno'] = self.d.crsp.permno_from_cusip(hol)
         hol = hol[hol.permno.notna()]
@@ -45,7 +45,7 @@ class tr13f(data_module):
         ########################################
         cols = ['rdate', 'mgrno', 'fdate']
         # key = ['rdate', 'mgrno']
-        df = self.d.open_data(self.type1, cols)
+        df = self.open_data(self.type1, cols)
         # Keep first vintage with holdings data for each (rdate, mgrno)
         df = df.groupby(['rdate', 'mgrno']).fdate.min().reset_index()
         df = df.drop_duplicates()
@@ -79,9 +79,9 @@ class tr13f(data_module):
         ############################
         data_cols = self.d.get_fields_names(data)
         if 'permno' in data_cols:
-            dfu = self.d.open_data(data, ['permno', self.d.col_date])
+            dfu = self.open_data(data, ['permno', self.d.col_date])
         elif 'gvkey' in data_cols:
-            dfu = self.d.open_data(data, ['gvkey', self.d.col_date])
+            dfu = self.open_data(data, ['gvkey', self.d.col_date])
             dfu['permno'] = self.d.crsp.permno_from_gvkey(dfu)
         else:
             raise Exception('get_io_perc only accepts permno or gvkey ' +
