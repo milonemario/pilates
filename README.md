@@ -15,13 +15,17 @@ The library has the ability to directly download data from WRDS servers if neces
 ## Installation
 
 To install, just run
+```
 python setup.py install
+```
 
 Given that the library is very new, users are encouraged to help develop it, fix
 bugs and suggest new directions.
 
 To install in develop mode (editable), run
+```
 python setup.py develop
+```
 
 Installing the library in develop mode allows the user to modify the source code
 and have the changes applying immediately (after re-importing the library).
