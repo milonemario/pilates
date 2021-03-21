@@ -94,9 +94,6 @@ class ibes(wrds_module):
         The code is adapted from Qingyi (Freda) Song Drechsler
         (updated June 2020)
         https://www.fredasongdrechsler.com/python-code/iclink
-        Arguments:
-            ibes_id --  IBES 'id' data
-            crsp_stocknames --  CRSP 'stocknames' data
         """
         #########################
         # Step 1: Link by CUSIP #

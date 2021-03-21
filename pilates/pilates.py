@@ -10,6 +10,7 @@ as Compustat, CRSP, IBES, FRED, etc.
 
 # import sys
 import os, sys, getpass, stat
+import wget, tarfile, gzip
 import pathlib
 import yaml
 import numpy as np
@@ -172,10 +173,15 @@ class data:
             self.datadir = datadir+'/'
         else:
             self.datadir = datadir
-        # Create the directory if it does not exist
-        pathlib.Path(datadir).mkdir(parents=True, exist_ok=True)
+        # Set directory for raw files downloads
+        self.datadownload = datadir + 'downloads/'
+        # Create the directories if it does not exist
+        pathlib.Path(self.datadir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.datadownload).mkdir(parents=True, exist_ok=True)
 
-    def convert_data(self, filename, force=False, sample=None, types=None):
+    def convert_data(self, filename,
+                     force=False, types=None,
+                     delim_whitespace=False):
         """ Convert the file to parquet and save it in the
         data directory.
 
@@ -187,8 +193,6 @@ class data:
             filename (str): Path of the file to convert.
             force (bool, optional): If False, the file is not re-converted.
                 Defaults to False.
-            sample (int, optional): Number of rows to convert.
-                If None, converts the whole file. Defaults to None.
             types (str, optional): Path of the Yaml file containing the fields
                 types of the data.
 
@@ -213,10 +217,12 @@ class data:
                 # Get the total number of rows
                 nrows = f.row_count
             elif ext in ['.csv', '.asc']:
-                f = pd.read_csv(filename, chunksize=self.chunksize)
+                f = pd.read_csv(filename, chunksize=self.chunksize,
+                                delim_whitespace=delim_whitespace)
                 # Get the total number of rows
                 # Need to open the file (only one column)
-                f_tmp = pd.read_csv(filename, usecols=[0])
+                f_tmp = pd.read_csv(filename, usecols=[0],
+                                    delim_whitespace=delim_whitespace)
                 nrows = f_tmp.shape[0]
                 del(f_tmp)
             else:
@@ -243,8 +249,6 @@ class data:
                     t = pa.Table.from_pandas(df, schema=pqschema)
                     # t = pa.Table.from_pandas(df)
                 pqwriter.write_table(t)
-                if sample is not None and nobs > sample:
-                    break
             print('\r')
             pqwriter.close()
         return(name)
@@ -408,7 +412,52 @@ class data_module:
                                 "This module supports the following files: ",
                                 str(list(self.files.keys())))
 
-    def add_file(self, name, path, force=False, types=None):
+    def set_remote_access(self, remote_access=True):
+        self.remote_access = remote_access
+
+    def __filepath_ext(self, name):
+        """ Return the full path (with extenssion) of the file to dowload.
+        The file can be  a compressed file.
+        """
+        url = self.files[name]['url']
+        filename, ext = os.path.splitext(os.path.basename(url))
+        filepath_ext = self.d.datadownload + filename + ext
+        return filepath_ext
+
+    def __path(self, name):
+        """ Return the full path (with extension) of the file to be converted.
+        The file is an uncompressed file
+        """
+        url = self.files[name]['url']
+        filename, ext = os.path.splitext(os.path.basename(url))
+        filetype = self.files[name]['type']
+        path = self.d.datadownload + filename + '.' + filetype
+        return path
+
+    def __filepath_pq(self, name):
+        """ Return the full path of the parquet file to be used by the module.
+        """
+        url = self.files[name]['url']
+        filename, ext = os.path.splitext(os.path.basename(url))
+        filename_pq = self.d.datadir + filename + '.parquet'
+        return filename_pq
+
+    def download_file(self, name):
+        url = self.files[name]['url']
+        filepath_ext = self.__filepath_ext(name)
+        path = self.__path(name)
+        # Download the file
+        if not os.path.exists(self.filepath_ext):
+            print('Download file '+name+' for module '+self.__class__.__name__+' ...')
+            wget.download(url, filepath_ext)
+        # Uncompress file if needed
+        if ext == '.gz':
+            f = gzip.open(filepath_ext, 'rt')
+            content = f.read()
+            with open(path, 'w') as fn:
+                fn.write(content)
+
+    def add_file(self, name, path=None, force=False, types=None, delim_whitespace=False):
         """ Add a file to the module.
         Converts and make the file available for the module to use.
 
@@ -423,8 +472,37 @@ class data_module:
         """
         # Check the file name (if it is part of the allowed files)
         self._check_name(name)
-        f = self.d.convert_data(path, force)
-        setattr(self, name, f)
+        if not hasattr(self, name):
+            if self.remote_access and not path:
+                # Module is requested the fetch the file by itself
+                url = self.files[name]['url']
+                # Get extension
+                filepath_ext = self.__filepath_ext(name)
+                path = self.__path(name)
+                filepath_pq = self.__filepath_pq(name)
+                if not os.path.exists(filepath_pq):
+                    self.download_file(name)
+                    # Download the file
+                    if not os.path.exists(filepath_ext):
+                        print('Download file '+name+' for module '+self.__class__.__name__+' ...')
+                        wget.download(url, filepath_ext)
+                    # Uncompress file if needed
+                    if ext == '.gz':
+                        f = gzip.open(filepath_ext, 'rt')
+                        content = f.read()
+                        with open(path, 'w') as fn:
+                            fn.write(content)
+                    # Set arguments
+                    if 'delim_whitespace' in self.files[name].keys():
+                        delim_whitespace = self.files[name]['delim_whitespace']
+            elif not path:
+                raise Exception('The module is not set to getch remote files '
+                                'and no file path is provided.')
+            # Convert the file
+            f = self.d.convert_data(path, force=force, types=types,
+                                    delim_whitespace=delim_whitespace)
+            # Add the file to the module
+            setattr(self, name, f)
 
     def open_data(self, name, columns=None, types=None):
         """ Open the data.
@@ -528,8 +606,8 @@ class wrds_module(data_module):
     def __init__(self, d):
         data_module.__init__(self, d)
 
-    def set_remote_access(self, remote_access, wrds_username=None):
-        self.remote_access = remote_access
+    def set_remote_access(self, remote_access=True, wrds_username=None):
+        data_module.set_remote_access(self, remote_access)
         # WRDS Library
         self.wrds_username = wrds_username
         self.library = self.files['wrds']['library']

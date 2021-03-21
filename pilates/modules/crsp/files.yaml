@@ -25,3 +25,7 @@ dsi:
 # Daily Stock Events
 dse:
   table: dse
+
+# Stock Names
+stocknames:
+  table: stocknames

@@ -1,0 +1,15 @@
+#######################
+# Files for PIN data  #
+#######################
+
+# Annual data
+ann:
+  url: https://scholar.rhsmith.umd.edu/sites/default/files/sbrown/files/pins_vdj_ann.asc_.gz
+  type: csv
+  delim_whitespace: True
+
+# Quarterly data
+qtr:
+  url: https://scholar.rhsmith.umd.edu/sites/default/files/sbrown/files/pins_vdj_qtr.asc_.gz
+  type: csv
+  delim_whitespace: True

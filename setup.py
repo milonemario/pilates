@@ -19,5 +19,7 @@ setup(name='pilates',
             'fredapi',
             'rapidfuzz',
             'psycogpg2',
+            'wget',
+            'gzip',
       ],
       zip_safe=False)

@@ -1,0 +1,29 @@
+##################
+# Files for IBES #
+##################
+
+# Library (schema) on WRDS Postgresql database
+wrds:
+  library: ibes
+
+# ID table
+id:
+  table: id
+
+det:
+  table: det_epsus
+
+act:
+  table: act_epsus
+
+sum:
+  table: statsum_epsus
+
+adj:
+  table: adj
+
+guidance:
+  table: det_guidance
+
+ptg:
+  table: ptgdet
