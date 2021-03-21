@@ -338,7 +338,7 @@ class data:
             self.freq = 'Q'
         elif frequency in ['Annual', 'annual', 'A', 'a',
                            'Yearly', 'yearly', 'Y', 'y']:
-            self.data_freq = 'A'
+            self.freq = 'A'
         else:
             raise Exception('The data frequency must be either' +
                             ' Daily, Monthly, Quarterly, or Annual')

@@ -1,22 +1,53 @@
 """
 Provide convenient functions to get FRED economic data.
+
+Series can be found here:
+https://fred.stlouisfed.org/
 """
 
 from pilates import data_module
 import pandas as pd
 from fredapi import Fred
 
+FRED_API_KEY = '69e42ccbb7fa5da6cc743e564d08be62'
 
 class fred(data_module):
 
     def __init__(self, w):
         data_module.__init__(self, w)
+        self.fred = Fred(api_key = FRED_API_KEY)
 
-    def set_api_key(self, api_key):
-        self.fred = Fred(api_key=api_key)
+    def get_serie_for_data(self, data, serie, col_date):
+        # Get series information (frequency, etc)
+        #df_fred_info = self.fred.get_series_info(serie)
+        df_fred = self.fred.get_series(serie)
+        df = pd.DataFrame(df_fred).reset_index()
+        df.columns = ['date_fred', serie]
+        # Prepare the user data
+        data[col_date] = pd.to_datetime(data[col_date])
+        # Find nearest dates
+        data = data.sort_values(col_date)
+        df = df.sort_values('date_fred')
+        dfin = pd.merge_asof(data[col_date], df, left_on=col_date, right_on='date_fred',
+                             direction='nearest',
+                             tolerance=pd.Timedelta('31 day'))
+        dfin.index = data.index
+        return dfin[[serie]]
 
-    def get_10y_US_rates(self, data, col_date=None):
+    def get_series(self, data, series, col_date=None):
+        """ Return the FRED series to be added to the user data.
+        """
+        if not col_date:
+            col_date = self.d.col_date
+        dfin = data[[col_date]]
+        for serie in series:
+            dfin[serie] = self.get_serie_for_data(dfin, serie, col_date)
+        return dfin[series]
+
+    # Depreciated
+    def __get_10y_US_rates(self, data, col_date=None):
         """ Return the 10 years treasury rates.
+        Depreciated. Use get_series().
         """
         if col_date is None:
             col_date = self.d.col_date
