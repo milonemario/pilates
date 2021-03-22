@@ -297,7 +297,7 @@ class data_module:
         """
         if name in self.files.keys():
             if 'url' in self.files[name].keys():
-                filename = self.files[name]['url']
+                url = self.files[name]['url']
                 filename, ext = os.path.splitext(os.path.basename(url))
             elif name in self.files.keys() and 'table' in self.files[name].keys():
                 filename = self.files[name]['table']
@@ -322,8 +322,41 @@ class data_module:
                                 "Module "+self.__class__.__name__+"supports "
                                 "the following files: "+str(list(self.files.keys())))
 
-    def _convert_data(self, name, path, force=False,
-                     delim_whitespace=False):
+    def _convert_data_by_chunks(self, f, filepath_pq, nrows):
+        """ Convert the file by chunks
+
+        Args:
+            f (iterator): file already opened by chunks.
+            filepath_pq (str): Path of the parquet file to create.
+            nrows (int): Number of rows in the file.
+
+        """
+        # Write the data
+        pqwriter = None
+        # pqschema = None
+        for i, df in enumerate(f):
+            df = self._process_fields(df)
+            df.columns = map(str.lower, df.columns)  # Lower case col names
+            df = self._correct_columns_types(df)
+            nobs = (i+1)*f.chunksize
+            print("Progress conversion : {:2.0%}".format(nobs/float(nrows)), end='\r')
+            if i == 0:
+                # Correct the column types on the first chunk to get
+                # the correct schema
+                t = pa.Table.from_pandas(df)
+                pqschema = t.schema
+                pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
+            else:
+                t = pa.Table.from_pandas(df, schema=pqschema)
+                # t = pa.Table.from_pandas(df)
+            pqwriter.write_table(t)
+        print('\r')
+        pqwriter.close()
+
+    def _convert_data(self, name, path,
+                     force=False,
+                     delim_whitespace=False,
+                     nrows=None):
         """ Convert the file to parquet and save it in the
         data directory.
 
@@ -347,16 +380,19 @@ class data_module:
         # Create the new file name
         filepath_pq = self._filepath_pq(name)
         # Check if the file has already been converted
-        if not os.path.exists(filepath_pq) and force is False:
+        if not os.path.exists(filepath_pq) or force:
+            print('Conversion '+name)
             # Get the file type
             filename, ext = os.path.splitext(os.path.basename(path))
             # Open the file (by chunks)
             if ext == '.sas7bdat':
-                f = pd.read_sas(path, chunksize=self.chunksize)
+                f = pd.read_sas(path, chunksize=self.d.chunksize)
                 # Get the total number of rows
                 nrows = f.row_count
+                # Convert the file
+                self._convert_data_by_chunks(f, filepath_pq, nrows)
             elif ext in ['.csv', '.asc']:
-                f = pd.read_csv(path, chunksize=self.chunksize,
+                f = pd.read_csv(path, chunksize=self.d.chunksize,
                                 delim_whitespace=delim_whitespace)
                 # Get the total number of rows
                 # Need to open the file (only one column)
@@ -364,32 +400,20 @@ class data_module:
                                     delim_whitespace=delim_whitespace)
                 nrows = f_tmp.shape[0]
                 del(f_tmp)
+                self._convert_data_by_chunks(f, filepath_pq, nrows)
+            elif ext in ['xls', 'xlsx']:
+                # Open the file
+                df = pd.read_excel(path, nrows=nrows)
+                # For excel files write the full data at once (not by chunks)
+                df.columns = map(str.lower, df.columns)  # Lower case col names
+                t = pa.Table.from_pandas(df)
+                pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
+                pqwriter.write_table(t)
+                pqwriter.close()
             else:
                 raise Exception("This file format is not currently "
                                 "supported. Supported formats are: "
                                 ".sas7bdat, .csv")
-            # Write the data
-            pqwriter = None
-            # pqschema = None
-            for i, df in enumerate(f):
-                df = self._process_fields(df)
-                df.columns = map(str.lower, df.columns)  # Lower case col names
-                df = self.correct_columns_types(df)
-                nobs = (i+1)*f.chunksize
-                print("Progress conversion {}: {:2.0%}".format(name,
-                      nobs/float(nrows)), end='\r')
-                if i == 0:
-                    # Correct the column types on the first chunk to get
-                    # the correct schema
-                    t = pa.Table.from_pandas(df)
-                    pqschema = t.schema
-                    pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
-                else:
-                    t = pa.Table.from_pandas(df, schema=pqschema)
-                    # t = pa.Table.from_pandas(df)
-                pqwriter.write_table(t)
-            print('\r')
-            pqwriter.close()
 
     def _process_fields(self, df):
         """ Properly encode the string fields (remove bytes string types).
@@ -514,10 +538,11 @@ class data_module:
 
     def download_file(self, name):
         url = self.files[name]['url']
-        filepath_ext = self.__filepath_ext(name)
-        path = self.__path(name)
+        filepath_ext = self._filepath_ext(name)
+        _, ext = os.path.splitext(os.path.basename(url))
+        path = self._path(name)
         # Download the file
-        if not os.path.exists(self.filepath_ext):
+        if not os.path.exists(filepath_ext):
             print('Download file '+name+' for module '+self.__class__.__name__+' ...')
             wget.download(url, filepath_ext)
         # Uncompress file if needed
@@ -527,7 +552,11 @@ class data_module:
             with open(path, 'w') as fn:
                 fn.write(content)
 
-    def add_file(self, name, path=None, force=False, delim_whitespace=False):
+    def add_file(self, name, path=None, force=False,
+                 # For CSV files
+                 delim_whitespace=False,
+                 # for Excel files
+                 nrows=None):
         """ Add a file to the module.
         Converts and make the file available for the module to use.
 
@@ -541,7 +570,7 @@ class data_module:
 
         """
         # Check the file name (if it is part of the allowed files)
-        self.d._check_name(name)
+        self._check_name(name)
         if not hasattr(self, name):
             if self.remote_access and not path:
                 # Module is requested the fetch the file by itself
@@ -552,25 +581,18 @@ class data_module:
                 filepath_pq = self._filepath_pq(name)
                 if not os.path.exists(filepath_pq):
                     self.download_file(name)
-                    # Download the file
-                    if not os.path.exists(filepath_ext):
-                        print('Download file '+name+' for module '+self.__class__.__name__+' ...')
-                        wget.download(url, filepath_ext)
-                    # Uncompress file if needed
-                    if ext == '.gz':
-                        f = gzip.open(filepath_ext, 'rt')
-                        content = f.read()
-                        with open(path, 'w') as fn:
-                            fn.write(content)
                     # Set arguments
                     if 'delim_whitespace' in self.files[name].keys():
                         delim_whitespace = self.files[name]['delim_whitespace']
+                    if 'nrows' in self.files[name].keys():
+                        nrows = self.files[name]['nrows']
             elif not path:
                 raise Exception('The module is not set to getch remote files '
                                 'and no file path is provided.')
             # Convert the file
-            f = self._convert_data(path, force=force, types=self.types,
-                                    delim_whitespace=delim_whitespace)
+            f = self._convert_data(name, path, force=force,
+                                    delim_whitespace=delim_whitespace,
+                                    nrows=nrows)
             # Add the file to the module
             setattr(self, name, name)
 
@@ -878,7 +900,7 @@ class wrds_module(data_module):
         else:
             pgfile = self.__pgpass_file_unix()
         if not self.__pgpass_exists(pgfile):
-            self._wrds_passwd = getpass.getpass('Enter your WRDS password:')
+            self._wrds_passwd = getpass.getpass('Enter the WRDS password for {}:'.format(self.wrds_username))
             self.__write_pgpass_file(pgfile)
 
     def __pgpass_file_win32(self):
@@ -910,11 +932,6 @@ class wrds_module(data_module):
         """
         homedir = os.getenv('HOME')
         pgfile = homedir + os.path.sep + '.pgpass'
-        if (os.path.isfile(pgfile)):
-            # Set it to mode 600 (rw-------) so we can write to it
-            os.chmod(pgfile, stat.S_IRUSR | stat.S_IWUSR)
-        # Set it to mode 400 (r------) to protect it
-        os.chmod(pgfile, stat.S_IRUSR)
         return pgfile
 
     def __write_pgpass_file(self, pgfile):
@@ -928,58 +945,40 @@ class wrds_module(data_module):
         pgpass = "{host}:{port}:{dbname}:{user}:{passwd}"
         passwd = self._wrds_passwd
         passwd = passwd.replace(':', '\:')
-        # Avoid clobbering the file if it exists
+        line = pgpass.format(
+            host=WRDS_POSTGRES_HOST,
+            port=WRDS_POSTGRES_PORT,
+            dbname=WRDS_POSTGRES_DB,
+            user=self.wrds_username,
+            passwd=passwd)
+        lines = [line]
         if (os.path.isfile(pgfile)):
-            with open(pgfile, 'r') as fd:
-                lines = fd.readlines()
-            newlines = []
-            for line in lines:
-                # Handle escaped colons, preventing
-                #  split() from splitting on them.
-                # Saving to a new variable here absolves us
-                #  of having to re-replace the substituted ##COLON## later.
-                oldline = line.replace("""\:""", '##COLON##')
-                fields = oldline.split(':')
-                # On finding a line matching the hostname, port and dbname
-                #  we replace it with the new pgpass line.
-                # Surely we won't have any colons in these fields :^)
-                if (fields[0] == self._hostname and
-                        int(fields[1]) == self._port and
-                        fields[2] == self._dbname):
-                    newline = pgpass.format(
-                        host=WRDS_POSTGRES_HOST,
-                        port=WRDS_POSTGRES_PORT,
-                        dbname=WRDS_POSTGRES_DB,
-                        user=self.wrds_username,
-                        passwd=passwd)
-                    newlines.append(newline)
-                else:
-                    newlines.append(line)
-            lines = newlines
+            if not (sys.platform == 'win32'):
+                # Set it to mode 600 (rw-------) so we can write to it
+                os.chmod(pgfile, stat.S_IRUSR | stat.S_IWUSR)
+            file = open(pgfile, 'a')
         else:
-            line = pgpass.format(
-                host=WRDS_POSTGRES_HOST,
-                port=WRDS_POSTGRES_PORT,
-                dbname=WRDS_POSTGRES_DB,
-                user=self.wrds_username,
-                passwd=passwd)
-            lines = [line]
-        # I lied, we're totally clobbering it:
-        with open(pgfile, 'w') as fd:
-            fd.writelines(lines)
-            fd.write('\n')
+            file = open(pgfile, 'w')
+
+        # Add a new line or create file
+        file.writelines(lines)
+        file.write('\n')
+        file.close()
+        if not (sys.platform == 'win32'):
+            # Set it to mode 400 (r------) to protect it
+            os.chmod(pgfile, stat.S_IRUSR)
 
     def __pgpass_exists(self, pgfile):
         if (os.path.isfile(pgfile)):
             with open(pgfile, 'r') as fd:
                 lines = fd.readlines()
-            newlines = []
             for line in lines:
                 oldline = line.replace("""\:""", '##COLON##')
                 fields = oldline.split(':')
                 if (fields[0] == WRDS_POSTGRES_HOST and
                         int(fields[1]) == WRDS_POSTGRES_PORT and
-                        fields[2] == WRDS_POSTGRES_DB):
+                        fields[2] == WRDS_POSTGRES_DB and
+                        fields[3] == self.wrds_username):
                     return True
         else:
             return False

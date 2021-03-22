@@ -1,0 +1,14 @@
+#######################
+# Files for PIN data  #
+#######################
+
+# Country data
+epu_country:
+  url: https://www.policyuncertainty.com/media/All_Country_Data.xlsx
+  type: xlsx
+
+# Firm data
+epu_firm:
+  url: https://scholar.rhsmith.umd.edu/sites/default/files/sbrown/files/pins_vdj_qtr.asc_.gz
+  type: csv
+  delim_whitespace: True

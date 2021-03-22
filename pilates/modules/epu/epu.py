@@ -20,7 +20,31 @@ class epu(data_module):
         self.level = 'country'
         self.maindata = 'comp'
 
-    def add_file(self, name, path, nrows=None, force=False, types=None):
+    def _convert_data(self, name, path, force=False,
+                     delim_whitespace=False):
+        if name not in ['epu_country']:
+            data_module._convert_data(self, name, path)
+        else:
+            # For epu country, the Excel file is not clean.
+            # Need to find how many rows to consider.
+            self.d._check_data_dir()
+            # Create the new file name
+            filepath_pq = self._filepath_pq(name)
+            # Open the file with different number of rows until we have maximum
+            # amount of data.
+            import ipdb; ipdb.set_trace();
+            df = pd.read_excel(path)
+            #df = pd.read_excel(path, nrows=nrows)
+            # For excel files write the full data at once (not by chunks)
+            df.columns = map(str.lower, df.columns)  # Lower case col names
+            t = pa.Table.from_pandas(df)
+            pqwriter = pq.ParquetWriter(filename_pq, t.schema)
+            pqwriter.write_table(t)
+            pqwriter.close()
+
+        None
+
+    def add_file_old(self, name, path, nrows=None, force=False, types=None):
         """ Add a file to the module.
         Converts and make the file available for the module to use.
 

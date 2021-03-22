@@ -1,14 +1,14 @@
 """
-Provides processing functions for the CBOE data.
+Provides processing functions for the CBOE data from WRDS.
 """
 
-from pilates import data_module
+from pilates import wrds_module
 
 
-class cboe(data_module):
+class cboe(wrds_module):
 
     def __init__(self, d):
-        data_module.__init__(self, d)
+        wrds_module.__init__(self, d)
         # Initialize values
         self.col_date = 'date'
 

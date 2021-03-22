@@ -1,0 +1,23 @@
+#################
+# Files for SEC #
+#################
+
+# So far the module handles 13F data. The WRDS SEC Analytics Suite Trial
+# Has no limitation on 13F data, so we use this one (library:secsamp).
+# Note: This should be changed once the module supports more data.
+
+# Library (schema) on WRDS Postgresql database
+wrds:
+  library: secsamp
+
+#13F Summary
+summary:
+  table: wrds_13f_summary
+
+# 13F Holdings
+holdings:
+  table: wrds_13f_holdings
+
+# Link table
+link:
+  table: wrds_13f_link

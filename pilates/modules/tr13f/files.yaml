@@ -1,0 +1,15 @@
+####################
+# Files for TR 13F #
+####################
+
+# Library (schema) on WRDS Postgresql database
+wrds:
+  library: tfn
+
+# Type 1: Institutional Manager Characteristics
+type1:
+  table: s34type1
+
+# Type 3: Stock Holdings
+type3:
+  table: s34type3

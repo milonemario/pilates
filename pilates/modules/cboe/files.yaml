@@ -1,0 +1,11 @@
+##################
+# Files for CBOE #
+##################
+
+# Library (schema) on WRDS Postgresql database
+wrds:
+  library: cboe
+
+# CBOE
+cboe:
+  table: cboe
