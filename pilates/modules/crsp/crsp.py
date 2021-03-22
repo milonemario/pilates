@@ -5,7 +5,6 @@ Provides processing functions for CRSP data.
 from pilates import wrds_module
 import pandas as pd
 import numpy as np
-import pandas_market_calendars as mcal
 
 
 class crsp(wrds_module):
@@ -75,7 +74,7 @@ class crsp(wrds_module):
         dfu = self.open_data(data, key)
         dfin = dfu.merge(dm, how='left', on=key)
         dfin.index = dfu.index
-        return(dfin.permno.astype('float32'))
+        return(dfin.permno)
 
     def permno_from_cusip(self, data):
         """ Returns CRSP permno from CUSIP.
@@ -174,24 +173,6 @@ class crsp(wrds_module):
         dfu[fields] = self._get_fields(fields, dfu, self.dsf)
         return(dfu[fields])
 
-    def _closest_trading_date(self, dates, t='past'):
-        """ Return the closest trading day either in the past (t='past')
-        or in the future (t='future').
-        Based on opening days of the NYSE. """
-        dates = pd.to_datetime(dates)
-        nyse = mcal.get_calendar('NYSE')
-        mind = dates.min()
-        maxd = dates.max()
-        dates_nyse = nyse.schedule(mind, maxd).market_open.dt.date
-        sm = (~dates.dt.date.isin(dates_nyse)).astype(int)
-        for i in range(0, 6):
-            if t == 'past':
-                dates = dates - pd.to_timedelta(sm, unit='d')
-            else:
-                dates = dates + pd.to_timedelta(sm, unit='d')
-            sm = (~dates.dt.date.isin(dates_nyse)).astype(int)
-        return(dates.dt.date)
-
     def _value_for_data(self, var, data, nperiods, useall):
         """" Add values to the users data and return the values.
         Arguments:
@@ -212,22 +193,31 @@ class crsp(wrds_module):
             values = var.reset_index()
         else:
             values = var.shift(-nperiods).reset_index()
+        # Make sure the types are correct
+        values = self._correct_columns_types(values)
         # Open user data
         cols_data = [self.col_id, self.d.col_date]
         dfu = self.open_data(data, cols_data)
-        index = dfu.index
-        # Use the last or next trading day if requested
-        # Shift a maximum of 6 days
-        if useall is True:
-            t = 'past'
+        # Prepare the dataframes for merging
+        dfu = dfu.sort_values(self.d.col_date)
+        dfu = dfu.dropna()
+        values = values.sort_values(self.col_date)
+        if useall:
+            # Merge on permno and on closest date
+            # Use the last or next trading day if requested
+            # Shift a maximum of 6 days
+            direction = 'backward'
             if nperiods > 0:
-                t = 'future'
-            dfu[self.col_date] = self._closest_trading_date(dfu[self.d.col_date], t=t)
+                direction = 'forward'
+            dfin = pd.merge_asof(dfu, values,
+                                 left_on=self.d.col_date,
+                                 right_on=self.col_date,
+                                 by=self.col_id,
+                                 tolerance=pd.Timedelta('6 day'),
+                                 direction=direction)
         else:
-            dfu[self.col_date] = dfu[self.d.col_date]
-        # Merge the cumulative return to the data
-        dfin = dfu.merge(values, how='left', on=key)
-        dfin.index = index
+            dfin = dfu.merge(values, how='left', left_on=cols_data, right_on=self.key)
+        dfin.index = dfu.index
         return(dfin['var'].astype('float32'))
 
     ##########################
@@ -288,7 +278,7 @@ class crsp(wrds_module):
         window = abs(nperiods)
         sumln = sf.groupby(self.col_id).rolling(window).ln1ret.sum()
         cret = np.exp(sumln) - 1
-        # Reeturn the variable for the user data
+        # Return the variable for the user data
         return(self._value_for_data(cret, data, nperiods, useall))
 
     def volatility_return(self, data, nperiods=1, useall=True):
@@ -493,7 +483,7 @@ class crsp(wrds_module):
         # Remove missing values
         dse = dse.dropna()
         # Convert field to Integer
-        dse.dlstcd = dse.dlstcd.astype(int)
+        # dse.dlstcd = dse.dlstcd.astype(int)
         # Create the delist dummy
         dse.loc[dse.dlstcd.isin(codes), 'delist'] = 1
         dse = dse[dse.delist==1]

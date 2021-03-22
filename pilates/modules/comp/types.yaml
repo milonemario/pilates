@@ -6,6 +6,7 @@
 Int32:
   # General
   - gvkey
+  - fyear
   # Annual data
   - sic
 
@@ -54,7 +55,6 @@ str:
   - prican
   - prirow
   - priusa
-  #- sic
   - spcsrc
   - stalt
   - state
@@ -63,48 +63,16 @@ str:
   - weburl
   # Quarterly Data
   - acctchgq
-  - add1
-  - add2
-  - add3
-  - add4
-  - addzip
   - bsprq
-  - busdesc
   - cik
-  - city
   - compstq
-  - conm
-  - conml
-  - county
   - curncdq
-  - cusip
   - datacqtr
   - datafqtr
-  - dlrsn
-  - ein
-  - fax
-  - fic
   - finalq
-  - ggroup
-  - gind
-  - gsector
-  - gsubind
-  - idbflag
-  - incorp
-  - loc
-  - naics
   - ogmq
-  - phone
-  - prican
-  - prirow
-  - priusa
   - rp
-  - sic
-  - spcsrc
   - staltq
-  - state
-  - tic
-  - weburl
 
 date:
   # General
@@ -117,9 +85,7 @@ date:
   - pdate
   # Quarterly Data
   - apdedateq
-  - dldte
   - fdateq
-  - ipodate
   - pdateq
   - rdq
 
@@ -407,7 +373,7 @@ float32:
   - fsrct
   - fuseo
   - fuset
-  - fyear
+  # - fyear
   - fyr
   - fyrc
   - gbbl

@@ -295,11 +295,14 @@ class data_module:
     def _filepath_pq(self, name):
         """ Return the full path of the parquet file to be used by the module.
         """
-        if 'url' in self.files[name].keys():
-            filename = self.files[name]['url']
-            filename, ext = os.path.splitext(os.path.basename(url))
-        elif 'table' in self.files[name].keys():
-            filename = self.files[name]['table']
+        if name in self.files.keys():
+            if 'url' in self.files[name].keys():
+                filename = self.files[name]['url']
+                filename, ext = os.path.splitext(os.path.basename(url))
+            elif name in self.files.keys() and 'table' in self.files[name].keys():
+                filename = self.files[name]['table']
+            else:
+                filename = name
         else:
             filename = name
         filename_pq = self.d.datadir + filename + '.parquet'
@@ -486,12 +489,14 @@ class data_module:
             chnd = {k: v for k, v in ch.items() if v != 'date'}
             # Apply the non-dates
             if len(chnd) > 0:
-                df.loc[:, chnd.keys()] = df[chnd.keys()].astype(chnd)
+                for k in chnd.keys():
+                    df.loc[:, k] = df[k].astype(chnd[k])
             # Apply the dates
             if len(chd) > 0:
                 for k in chd.keys():
-                    df.loc[:, k] = pd.to_datetime(df[k]).dt.date
-                    df.loc[df[k].isna(), k] = np.nan
+                    #df.loc[:, k] = pd.to_datetime(df[k]).dt.date
+                    df.loc[:, k] = pd.to_datetime(df[k])
+                    #df.loc[df[k].isna(), k] = np.nan
 
         # Then use the user provided types
         if self.types:

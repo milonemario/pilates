@@ -416,7 +416,7 @@ class comp(wrds_module):
         # Remove missing values
         df = df.dropna()
         # Convert sic field to Integer
-        df.sic = df.sic.astype(int)
+        #df.sic = df.sic.astype(int)
         # Create the litigation dummy
         df['litig'] = 0
         df.loc[df.sic.isin(rs), 'litig'] = 1

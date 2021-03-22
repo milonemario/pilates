@@ -10,6 +10,8 @@ Int32:
   - lpermco
   # CRSP
   - permno
+  - permco
+  - dlstcd
 
 str:
   # Linktable
@@ -59,7 +61,7 @@ float32:
   - dlprc
   - dlret
   - dlretx
-  - dlstcd
+  #- dlstcd
   - ewretd
   - ewretx
   - exchcd
@@ -76,7 +78,7 @@ float32:
   - numtrd
   - nwperm
   - openprc
-  - permco
+  #- permco
   - prc
   - ret
   - retx
