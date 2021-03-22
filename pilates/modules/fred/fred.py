@@ -19,7 +19,8 @@ class fred(data_module):
 
     def get_serie_for_data(self, data, serie, col_date):
         # Get series information (frequency, etc)
-        #df_fred_info = self.fred.get_series_info(serie)
+        df_fred_info = self.fred.get_series_info(serie)
+        tolerance = pd.Timedelta('90 day')
         df_fred = self.fred.get_series(serie)
         df = pd.DataFrame(df_fred).reset_index()
         df.columns = ['date_fred', serie]
@@ -30,7 +31,7 @@ class fred(data_module):
         df = df.sort_values('date_fred')
         dfin = pd.merge_asof(data[col_date], df, left_on=col_date, right_on='date_fred',
                              direction='nearest',
-                             tolerance=pd.Timedelta('31 day'))
+                             tolerance=tolerance)
         dfin.index = data.index
         return dfin[[serie]]
 

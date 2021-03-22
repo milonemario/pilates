@@ -52,10 +52,12 @@ def check_duplicates(df, key, description=''):
         print("Warning: The data {:} contains {:} \
               duplicates".format(description, n_dup))
 
-def correct_columns_types(df, types=None):
+def __correct_columns_types(df, types=None):
     """ Apply the correct data type to all known columns.
     Known columns are listed in the files contained in the folder 'types'.
     A custom type file can be provided by the user.
+
+    Depreciated.
 
     Args:
         df (pandas.DataFrame): DataFrame.
@@ -122,6 +124,8 @@ class data:
     Args:
         datadir (str): Path of the directory used to store the data files
             for use by the module.
+        chunksize (int): Size of chunk to use when converting files and
+            downloading SQL requests.
 
     """
 
@@ -178,146 +182,6 @@ class data:
         # Create the directories if it does not exist
         pathlib.Path(self.datadir).mkdir(parents=True, exist_ok=True)
         pathlib.Path(self.datadownload).mkdir(parents=True, exist_ok=True)
-
-    def convert_data(self, filename,
-                     force=False, types=None,
-                     delim_whitespace=False):
-        """ Convert the file to parquet and save it in the
-        data directory.
-
-        This method currently support the following file formats:
-            - CSV
-            - SAS (.sas7bdat)
-
-        Args:
-            filename (str): Path of the file to convert.
-            force (bool, optional): If False, the file is not re-converted.
-                Defaults to False.
-            types (str, optional): Path of the Yaml file containing the fields
-                types of the data.
-
-        Todo:
-            * Add support for more file formaats (Stata, ...)
-
-        """
-        self._check_data_dir()
-        # Get the file type
-        name, ext = os.path.splitext(os.path.basename(filename))
-        # Create the new file name
-        filename_pq = self.datadir+name+'.parquet'
-        # Check if the file has already been converted
-        if os.path.exists(filename_pq) and force is False:
-            # print("The file has already been converted. " +
-            #       "Use force=True to force the conversion.")
-            None
-        else:
-            # Open the file (by chunks)
-            if ext == '.sas7bdat':
-                f = pd.read_sas(filename, chunksize=self.chunksize)
-                # Get the total number of rows
-                nrows = f.row_count
-            elif ext in ['.csv', '.asc']:
-                f = pd.read_csv(filename, chunksize=self.chunksize,
-                                delim_whitespace=delim_whitespace)
-                # Get the total number of rows
-                # Need to open the file (only one column)
-                f_tmp = pd.read_csv(filename, usecols=[0],
-                                    delim_whitespace=delim_whitespace)
-                nrows = f_tmp.shape[0]
-                del(f_tmp)
-            else:
-                raise Exception("This file format is not currently" +
-                                "supported. Supported formats are:" +
-                                ".sas7bdat, .csv")
-            # Write the data
-            pqwriter = None
-            # pqschema = None
-            for i, df in enumerate(f):
-                df = self._process_fields(df)
-                df.columns = map(str.lower, df.columns)  # Lower case col names
-                df = correct_columns_types(df, types=types)
-                nobs = (i+1)*f.chunksize
-                print("Progress conversion {}: {:2.0%}".format(name,
-                      nobs/float(nrows)), end='\r')
-                if i == 0:
-                    # Correct the column types on the first chunk to get
-                    # the correct schema
-                    t = pa.Table.from_pandas(df)
-                    pqschema = t.schema
-                    pqwriter = pq.ParquetWriter(filename_pq, t.schema)
-                else:
-                    t = pa.Table.from_pandas(df, schema=pqschema)
-                    # t = pa.Table.from_pandas(df)
-                pqwriter.write_table(t)
-            print('\r')
-            pqwriter.close()
-        return(name)
-
-    def _process_fields(self, df):
-        """ Properly encode the string fields (remove bytes string types).
-
-        Args:
-            df (pandas.DataFrame): DataFrame for which to process the string
-                fields.
-
-        """
-        for c in df.columns:
-            if df[c].dtype == object:
-                df[c] = df[c].where(df[c].apply(type) != bytes,
-                                    df[c].str.decode('utf-8', errors='ignore'))
-        return df
-
-    def open_data(self, name, columns=None, types=None):
-        """ Open the data.
-        Only return data from locally stored files.
-
-        Args:
-            name (str or pandas.DataFrame):
-                Either the name of the file to open or a DataFrame.
-                When a name is given, the file must have been converted using
-                convert_data().
-            columns (list, optional): Columns to keep. If None, returns all
-                the columns. Defaults to None.
-            types (str, optional): Path of the Yaml file containing the fields
-                types of the data.
-
-        Returns:
-            pandas.DataFrame: DataFrame with the required columns.
-
-        """
-        if isinstance(name, pd.DataFrame):
-            # If the name refers to a pandas DataFrame, just return it
-            df = name[columns]
-        else:
-            self._check_data_dir()
-            filename_pq = self.datadir+name+'.parquet'
-            t = pq.read_table(filename_pq, columns=columns)
-            df = t.to_pandas()
-            del(t)
-        return df
-
-    def get_fields_names(self, name):
-        """ Get the fields names of the file.
-        Only returns fields from locally stored files.
-
-        Args:
-            name (str or pandas.DataFrame):
-                Either the path of the parquet file to open or a DataFrame.
-
-        Returns:
-            list: List containing the fields names.
-
-        """
-        if isinstance(name, pd.DataFrame):
-            cols = name.columns
-        else:
-            # Otherwise, open the file from disk
-            self._check_data_dir()
-            # Open the parquet file and convert it to a pandas DataFrame
-            filename_pq = self.datadir+name+'.parquet'
-            schema = pq.read_schema(filename_pq)
-            cols = schema.names
-        return(cols)
 
     def set_data_frequency(self, frequency):
         """ Define the frequency of the user's data.
@@ -397,25 +261,19 @@ class data_module:
                 self.files = yaml.full_load(f)
         else:
             self.files = None
+        # Get information on fields types
+        path_types = _modules_dir + self.__class__.__name__ + '/types.yaml'
+        if os.path.exists(path_types):
+            with open(path_types) as f:
+                self.types= yaml.full_load(f)
+        else:
+            self.types = None
 
-    def _check_name(self, name):
-        """ Check that the file name is allowed for that module.
-        For example, the module for COMPUSTAT (comp) only handles certain files
-        such as 'funda', 'fundq', 'names'.
+    ###########################################################
+    # Helper functions for handling file conversion and other #
+    ###########################################################
 
-        Args:
-            name (str): Name of the file to be used by the module.
-        """
-        if self.files is not None:
-            if name not in self.files.keys():
-                raise Exception("The file name provided is incorrect. ",
-                                "This module supports the following files: ",
-                                str(list(self.files.keys())))
-
-    def set_remote_access(self, remote_access=True):
-        self.remote_access = remote_access
-
-    def __filepath_ext(self, name):
+    def _filepath_ext(self, name):
         """ Return the full path (with extenssion) of the file to dowload.
         The file can be  a compressed file.
         """
@@ -424,7 +282,7 @@ class data_module:
         filepath_ext = self.d.datadownload + filename + ext
         return filepath_ext
 
-    def __path(self, name):
+    def _path(self, name):
         """ Return the full path (with extension) of the file to be converted.
         The file is an uncompressed file
         """
@@ -434,13 +292,220 @@ class data_module:
         path = self.d.datadownload + filename + '.' + filetype
         return path
 
-    def __filepath_pq(self, name):
+    def _filepath_pq(self, name):
         """ Return the full path of the parquet file to be used by the module.
         """
-        url = self.files[name]['url']
-        filename, ext = os.path.splitext(os.path.basename(url))
+        if 'url' in self.files[name].keys():
+            filename = self.files[name]['url']
+            filename, ext = os.path.splitext(os.path.basename(url))
+        elif 'table' in self.files[name].keys():
+            filename = self.files[name]['table']
+        else:
+            filename = name
         filename_pq = self.d.datadir + filename + '.parquet'
         return filename_pq
+
+    def _check_name(self, name):
+        """ Check that the file name is allowed for that module.
+        For example, the module for COMPUSTAT (comp) only handles certain files
+        such as 'funda', 'fundq', 'names'.
+
+        Args:
+            name (str): Name of the file to be used by the module.
+        """
+        if self.files:
+            if name not in self.files.keys():
+                raise Exception("The file name provided is incorrect. "
+                                "Module "+self.__class__.__name__+"supports "
+                                "the following files: "+str(list(self.files.keys())))
+
+    def _convert_data(self, name, path, force=False,
+                     delim_whitespace=False):
+        """ Convert the file to parquet and save it in the
+        data directory.
+
+        This method currently support the following file formats:
+            - CSV
+            - SAS (.sas7bdat)
+
+        Args:
+            path (str): Path of the file to convert.
+            force (bool, optional): If False, the file is not re-converted.
+                Defaults to False.
+            delim_whitespace (bool): Set to True if the file is a CSV with
+                baln separateors (tab for instance). Passed to pandas.read_csv().
+                Defaults to False.
+
+        Todo:
+            * Add support for more file formats (Stata, ...)
+
+        """
+        self.d._check_data_dir()
+        # Create the new file name
+        filepath_pq = self._filepath_pq(name)
+        # Check if the file has already been converted
+        if not os.path.exists(filepath_pq) and force is False:
+            # Get the file type
+            filename, ext = os.path.splitext(os.path.basename(path))
+            # Open the file (by chunks)
+            if ext == '.sas7bdat':
+                f = pd.read_sas(path, chunksize=self.chunksize)
+                # Get the total number of rows
+                nrows = f.row_count
+            elif ext in ['.csv', '.asc']:
+                f = pd.read_csv(path, chunksize=self.chunksize,
+                                delim_whitespace=delim_whitespace)
+                # Get the total number of rows
+                # Need to open the file (only one column)
+                f_tmp = pd.read_csv(path, usecols=[0],
+                                    delim_whitespace=delim_whitespace)
+                nrows = f_tmp.shape[0]
+                del(f_tmp)
+            else:
+                raise Exception("This file format is not currently "
+                                "supported. Supported formats are: "
+                                ".sas7bdat, .csv")
+            # Write the data
+            pqwriter = None
+            # pqschema = None
+            for i, df in enumerate(f):
+                df = self._process_fields(df)
+                df.columns = map(str.lower, df.columns)  # Lower case col names
+                df = self.correct_columns_types(df)
+                nobs = (i+1)*f.chunksize
+                print("Progress conversion {}: {:2.0%}".format(name,
+                      nobs/float(nrows)), end='\r')
+                if i == 0:
+                    # Correct the column types on the first chunk to get
+                    # the correct schema
+                    t = pa.Table.from_pandas(df)
+                    pqschema = t.schema
+                    pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
+                else:
+                    t = pa.Table.from_pandas(df, schema=pqschema)
+                    # t = pa.Table.from_pandas(df)
+                pqwriter.write_table(t)
+            print('\r')
+            pqwriter.close()
+
+    def _process_fields(self, df):
+        """ Properly encode the string fields (remove bytes string types).
+
+        Args:
+            df (pandas.DataFrame): DataFrame for which to process the string
+                fields.
+
+        """
+        for c in df.columns:
+            if df[c].dtype == object:
+                df[c] = df[c].where(df[c].apply(type) != bytes,
+                                    df[c].str.decode('utf-8', errors='ignore'))
+        return df
+
+    def _open_local_data(self, name, columns=None):
+        """ Open the data.
+        Only return data from locally stored files.
+
+        Args:
+            name (str or pandas.DataFrame):
+                Either the name of the file to open or a DataFrame.
+                When a name is given, the file must have been converted using
+                convert_data().
+            columns (list, optional): Columns to keep. If None, returns all
+                the columns. Defaults to None.
+            types (str, optional): Path of the Yaml file containing the fields
+                types of the data.
+
+        Returns:
+            pandas.DataFrame: DataFrame with the required columns.
+
+        """
+        if isinstance(name, pd.DataFrame):
+            # If the name refers to a pandas DataFrame, just return it
+            df = name[columns]
+        else:
+            self.d._check_data_dir()
+            filepath_pq = self._filepath_pq(name)
+            t = pq.read_table(filepath_pq, columns=columns)
+            df = t.to_pandas()
+            del(t)
+        return df
+
+    def _get_local_fields_names(self, name):
+        """ Get the fields names of the file.
+        Only returns fields from locally stored files.
+
+        Args:
+            name (str or pandas.DataFrame):
+                Either the path of the parquet file to open or a DataFrame.
+
+        Returns:
+            list: List containing the fields names.
+
+        """
+        if isinstance(name, pd.DataFrame):
+            cols = name.columns
+        else:
+            # Otherwise, open the file from disk
+            self.d._check_data_dir()
+            # Open the parquet file and convert it to a pandas DataFrame
+            filepath_pq = self._filepath_pq(name)
+            schema = pq.read_schema(filepath_pq)
+            cols = schema.names
+        return(cols)
+
+    def _correct_columns_types(self, df):
+        """ Apply the correct data type to all known columns.
+        Known columns are listed in the files contained in the folder 'types'.
+        A custom type file can be provided by the user.
+
+        Args:
+            df (pandas.DataFrame): DataFrame.
+        """
+        def get_changes():
+            # Create the final type list
+            types_list1 = {}  # Convert to float before Int64
+            types_list2 = {}
+            for k, l in self.types.items():
+                for v in l:
+                    types_list1[v] = k
+                    types_list2[v] = k
+                    if k in ['Int64', 'Int32']:
+                        types_list1[v] = 'float'
+            # Select the common columns
+            cols_df = df.columns
+            cols_change = [v for v in cols_df if v in types_list2.keys()]
+            types_list_ch1 = {k: types_list1[k] for k in cols_change}
+            types_list_ch2 = {k: types_list2[k] for k in cols_change
+                              if types_list2[k] in ['Int64', 'Int32']}
+            return([types_list_ch1, types_list_ch2])
+
+        def apply_changes(ch):
+            # Apply the date and non-date types separately
+            chd = {k: v for k, v in ch.items() if v == 'date'}
+            chnd = {k: v for k, v in ch.items() if v != 'date'}
+            # Apply the non-dates
+            if len(chnd) > 0:
+                df.loc[:, chnd.keys()] = df[chnd.keys()].astype(chnd)
+            # Apply the dates
+            if len(chd) > 0:
+                for k in chd.keys():
+                    df.loc[:, k] = pd.to_datetime(df[k]).dt.date
+                    df.loc[df[k].isna(), k] = np.nan
+
+        # Then use the user provided types
+        if self.types:
+            changes = get_changes()
+            for ch in changes:
+                apply_changes(ch)
+        return(df)
+
+    #################
+    # Use functions #
+    #################
+
+    def set_remote_access(self, remote_access=True):
+        self.remote_access = remote_access
 
     def download_file(self, name):
         url = self.files[name]['url']
@@ -457,7 +522,7 @@ class data_module:
             with open(path, 'w') as fn:
                 fn.write(content)
 
-    def add_file(self, name, path=None, force=False, types=None, delim_whitespace=False):
+    def add_file(self, name, path=None, force=False, delim_whitespace=False):
         """ Add a file to the module.
         Converts and make the file available for the module to use.
 
@@ -471,15 +536,15 @@ class data_module:
 
         """
         # Check the file name (if it is part of the allowed files)
-        self._check_name(name)
+        self.d._check_name(name)
         if not hasattr(self, name):
             if self.remote_access and not path:
                 # Module is requested the fetch the file by itself
                 url = self.files[name]['url']
                 # Get extension
-                filepath_ext = self.__filepath_ext(name)
-                path = self.__path(name)
-                filepath_pq = self.__filepath_pq(name)
+                filepath_ext = self._filepath_ext(name)
+                path = self._path(name)
+                filepath_pq = self._filepath_pq(name)
                 if not os.path.exists(filepath_pq):
                     self.download_file(name)
                     # Download the file
@@ -499,12 +564,12 @@ class data_module:
                 raise Exception('The module is not set to getch remote files '
                                 'and no file path is provided.')
             # Convert the file
-            f = self.d.convert_data(path, force=force, types=types,
+            f = self._convert_data(path, force=force, types=self.types,
                                     delim_whitespace=delim_whitespace)
             # Add the file to the module
-            setattr(self, name, f)
+            setattr(self, name, name)
 
-    def open_data(self, name, columns=None, types=None):
+    def open_data(self, name, columns=None):
         """ Open the data.
         If the module is set to use remote files, update local files accordingly.
         Otherwise, use local files.
@@ -531,19 +596,19 @@ class data_module:
             missing_fields = columns.copy()
             # Check that a data directory has been provided
             self.d._check_data_dir()
-            filename_pq = self.d.datadir+name+'.parquet'
+            filepath_pq = self._filepath_pq(name)
             # Check if there is a file on disk to be used
-            if os.path.exists(filename_pq):
+            if os.path.exists(filepath_pq):
                 # If the file exists, update the missing fields
-                local_fields = self.d.get_fields_names(name)
+                local_fields = self._get_local_fields_names(name)
                 for c in columns:
                     if c in local_fields:
                         missing_fields.remove(c)
             # Update or create the file on disk
             if len(missing_fields) > 0:
-                self.add_fields_to_file(name, missing_fields)
+                self._add_fields_to_file(name, missing_fields)
         # The file on disk should be good to use now.
-        return self.d.open_data(name, columns, types)
+        return self._open_local_data(name, columns)
 
     def get_fields_names(self, name):
         """ Get the fields names of the file.
@@ -560,9 +625,9 @@ class data_module:
         """
 
         if self.remote_access:
-            return self.get_remote_fields_names(name)
+            return self._get_remote_fields_names(name)
         else:
-            return self.d.get_fields_names(name)
+            return self.d._get_local_fields_names(name)
 
     def get_lag(self, data, lag, fields=None, col_id=None, col_date=None):
         """ Return the lag of the columns in the data (or the fields if
@@ -606,6 +671,88 @@ class wrds_module(data_module):
     def __init__(self, d):
         data_module.__init__(self, d)
 
+    ####################
+    # Helper functions #
+    ####################
+
+    def _get_remote_fields_names(self, name):
+        """ Obtain the fields of the file 'name' from WRDS postgresql data.
+
+        """
+        table = self.files[name]['table']
+        sqlstmt = ('SELECT * FROM {schema}.{table} LIMIT 0;'.format(
+                   schema=self.library,
+                   table=table))
+        cursor = self.conn.cursor()
+        cursor.execute(sqlstmt)
+        cols = [desc[0] for desc in cursor.description]
+        cursor.close()
+        return cols
+
+    def _add_fields_to_file(self, name, fields):
+        # Get the missing fields
+        table = self.files[name]['table']
+        print('Downloading fields '+str(fields)+' for module',
+              self.__class__.__name__+', table '+table+' from WRDS ... ')
+        # Open and update existing file if any
+        filepath_pq = self._filepath_pq(name)
+        file_exists = False
+        if os.path.exists(filepath_pq):
+            file_exists = True
+            pqf = pq.ParquetFile(filepath_pq)
+        filepath_pq_new = filepath_pq + '_new'
+
+        # Get approximate row count
+        nrows = self.get_row_count(table)
+        # SQL query
+        cols = ','.join(fields)
+        sqlstmt = ('SELECT {cols} FROM {schema}.{table};'.format(
+                   cols=cols,
+                   schema=self.library,
+                   table=table))
+        # Read the SQL table by chunks
+        cursor = self.conn.cursor(name='mycursor')
+        cursor.itersize = self.d.chunksize
+        cursor.execute(sqlstmt)
+        more_data = True
+        i = 0
+        while more_data:
+            chunk = cursor.fetchmany(cursor.itersize)
+            dfsql = pd.DataFrame(chunk, columns=fields)
+            # Correct types
+            dfsql.columns = map(str.lower, dfsql.columns)  # Lower case col names
+            dfsql = self._correct_columns_types(dfsql)
+            if file_exists:
+                df = pqf.read_row_group(i).to_pandas()
+                # Merge old and new data
+                df[fields] = dfsql
+            else:
+                df = dfsql
+            if i == 0:
+                t = pa.Table.from_pandas(df)
+                pqschema = t.schema
+                pqwriter = pq.ParquetWriter(filepath_pq_new, t.schema)
+            else:
+                t = pa.Table.from_pandas(df, schema=pqschema)
+            pqwriter.write_table(t)
+            i += 1
+            if len(df) < self.d.chunksize:
+                more_data = False
+                print('Progress: Done')
+            else:
+                nobs = (i+1)*self.d.chunksize
+                print("Progress: {:2.0%}".format(nobs/float(nrows)), end='\r')
+        pqwriter.close()
+        cursor.close()
+        # Remove old file and rename new file
+        if file_exists:
+            os.remove(filepath_pq)
+        os.rename(filepath_pq_new, filepath_pq)
+
+    ################
+    # Overloadings #
+    ################
+
     def set_remote_access(self, remote_access=True, wrds_username=None):
         data_module.set_remote_access(self, remote_access)
         # WRDS Library
@@ -628,80 +775,10 @@ class wrds_module(data_module):
                 for name in names.keys():
                     setattr(self, name, name)
 
-    def get_remote_fields_names(self, name):
-        """ Obtain the fields of the file 'name' from WRDS postgresql data.
+    ########################################
+    # Replicate some wrds module functions #
+    ########################################
 
-        """
-        table = self.files[name]['table']
-        sqlstmt = ('SELECT * FROM {schema}.{table} LIMIT 0;'.format(
-                   schema=self.library,
-                   table=table))
-        cursor = self.conn.cursor()
-        cursor.execute(sqlstmt)
-        cols = [desc[0] for desc in cursor.description]
-        cursor.close()
-        return cols
-
-    def add_fields_to_file(self, name, fields):
-        # Get the missing fields
-        table = self.files[name]['table']
-        print('Downloading fields '+str(fields)+' for module',
-              self.__class__.__name__+', table '+table+' from WRDS ... ')
-        # Open and update existing file if any
-        filename_pq = self.d.datadir+name+'.parquet'
-        file_exists = False
-        if os.path.exists(filename_pq):
-            file_exists = True
-            pqf = pq.ParquetFile(filename_pq)
-        filename_pq_new = filename_pq + '_new'
-
-        # Get approximate row count
-        nrows = self.get_row_count(table)
-        #print('Number of rows (approximation): {}'.format(nrows))
-        # SQL query
-        cols = ','.join(fields)
-        sqlstmt = ('SELECT {cols} FROM {schema}.{table};'.format(
-                   cols=cols,
-                   schema=self.library,
-                   table=table))
-        # Read the SQL table by chunks
-        #print('Get SQL table by chunk')
-        cursor = self.conn.cursor(name='mycursor')
-        cursor.itersize = self.d.chunksize
-        cursor.execute(sqlstmt)
-        more_data = True
-        i = 0
-        while more_data:
-            chunk = cursor.fetchmany(cursor.itersize)
-            dfsql = pd.DataFrame(chunk, columns=fields)
-            if file_exists:
-                df = pqf.read_row_group(i).to_pandas()
-                # Merge old and new data
-                df[fields] = dfsql
-            else:
-                df = dfsql
-            if i == 0:
-                t = pa.Table.from_pandas(df)
-                pqschema = t.schema
-                pqwriter = pq.ParquetWriter(filename_pq_new, t.schema)
-            else:
-                t = pa.Table.from_pandas(df, schema=pqschema)
-            pqwriter.write_table(t)
-            i += 1
-            if len(df) < self.d.chunksize:
-                more_data = False
-                print('Progress: Done')
-            else:
-                nobs = (i+1)*self.d.chunksize
-                print("Progress: {:2.0%}".format(nobs/float(nrows)), end='\r')
-        pqwriter.close()
-        cursor.close()
-        # Remove old file and rename new file
-        if file_exists:
-            os.remove(filename_pq)
-        os.rename(filename_pq_new, filename_pq)
-
-    ##### Replicate some wrds module functions #####
     def __get_view_names(self):
         sqlcode = "select viewname from pg_catalog.pg_views;"
         with self.conn.cursor() as curs:

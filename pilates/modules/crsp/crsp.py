@@ -84,9 +84,9 @@ class crsp(wrds_module):
                     Required columns: ['cusip']
                     The cusip needs to be the CRSP ncusip.
         """
-        dfu = self.d.open_data(data, ['cusip'])
+        dfu = self.open_data(data, ['cusip'])
         cs = dfu.drop_duplicates()
-        pc = self.d.open_data(self.msenames, ['ncusip', 'permno'])
+        pc = self.open_data(self.msenames, ['ncusip', 'permno'])
         pc = pc.drop_duplicates()
         cs = cs.merge(pc, how='left', left_on=['cusip'], right_on=['ncusip'])
         csf = cs[['cusip', 'permno']].dropna().drop_duplicates()

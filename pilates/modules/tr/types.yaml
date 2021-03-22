@@ -17,7 +17,7 @@ date:
   - fdate
   - rdate
 
-datetime64: 
+datetime64:
   - prdate # Problem with this field at conversion as mostly NaN
 
 float32:
@@ -34,4 +34,3 @@ float32:
   - sole
   - type
   - typecode
-

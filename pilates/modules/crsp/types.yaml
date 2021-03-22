@@ -2,6 +2,15 @@
 # Column types for CRSP data #
 ##############################
 
+# Pandas Nullable Int32 type
+Int32:
+  # Linktable
+  - gvkey
+  - lpermno
+  - lpermco
+  # CRSP
+  - permno
+
 str:
   # Linktable
   - linkprim
@@ -35,12 +44,7 @@ date:
   - shrenddt
 
 float32:
-  # Linktable
-  - gvkey
-  - lpermno
-  - lpermco
   # CRSP
-  - permno
   - accomp
   - acperm
   - ask
@@ -85,4 +89,3 @@ float32:
   - vol
   - vwretd
   - vwretx
-

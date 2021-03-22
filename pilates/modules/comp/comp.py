@@ -88,7 +88,7 @@ class comp(wrds_module):
         """
         key = self.key
         cols_req = ['indfmt', 'datafmt', 'consol', 'popsrc']
-        data_key = self.d.open_data(data, key)
+        data_key = self.open_data(data, key)
         index = data_key.index
         comp = self.open_data(self.fund,
                                 key+fields+cols_req).drop_duplicates()
@@ -208,7 +208,7 @@ class comp(wrds_module):
         # Construct the object to return
         if data is not None:
             # Merge and return the fields
-            data_key = self.d.open_data(data, key)
+            data_key = self.open_data(data, key)
             index = data_key.index
             dfin = data_key.merge(df, how='left', on=key)
             dfin.index = index
@@ -262,7 +262,7 @@ class comp(wrds_module):
             stdl = std.groupby(self.col_id)[fields].shift(lag)
             std[fields] = stdl
         # Merge to the data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(std[key+fields], how='left', on=key)
         dfin.index = dfu.index
         return(dfin[fields])
@@ -278,7 +278,7 @@ class comp(wrds_module):
             df = self.get_fields(key+fields)
             df['v'] = fn(df)
             # Merge to the data
-            dfu = self.d.open_data(data, key)
+            dfu = self.open_data(data, key)
             dfin = dfu.merge(df[key+['v']], how='left', on=key)
             dfin.index = dfu.index
             return(dfin.v)
@@ -291,7 +291,7 @@ class comp(wrds_module):
     def _blevq(self, data):
         """ Return Book Leverage (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['ltq', 'txdbq', 'atq']
         df[fields] = self.get_fields(fields, data)
         # Replace txdbq by 0 when missing
@@ -313,7 +313,7 @@ class comp(wrds_module):
         condQ1 = df.month == df.monthQ1
         df.loc[condQ1, 'capxq'] = df[condQ1].capxy
         # Merge to the data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+['capxq']], how='left', on=key)
         dfin.index = dfu.index
         # Return the field
@@ -336,7 +336,7 @@ class comp(wrds_module):
         condQ1 = df.month == df.monthQ1
         df.loc[condQ1, 'dvtq'] = df[condQ1].dvy
         # Merge to the data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+['dvtq']], how='left', on=key)
         dfin.index = dfu.index
         # Return the field
@@ -345,7 +345,7 @@ class comp(wrds_module):
     def _epsdq(self, data):
         """ Returns Diluted EPS. """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['ibq', 'cshfdq']
         df[fields] = self.get_fields(fields, data)
         df['epsd'] = df.ibq / df.cshfdq
@@ -354,7 +354,7 @@ class comp(wrds_module):
     def _epsbq(self, data):
         """ Returns Basic EPS (non-diluted). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['ibq', 'cshprq']
         df[fields] = self.get_fields(fields, data)
         df['epsb'] = df.ibq / df.cshprq
@@ -363,7 +363,7 @@ class comp(wrds_module):
     def _eqq(self, data):
         """ Return Equity (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['prccq', 'cshoq']
         df[fields] = self.get_fields(fields, data)
         df['eqq'] = df.prccq * df.cshoq
@@ -389,7 +389,7 @@ class comp(wrds_module):
         # hhi = df.groupby(gk).s2.sum().reset_index(name='hhiq')
         # df = df.merge(hhi, how='left', on=gk)
         # Merge to the data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+['hhiq']], how='left', on=key)
         dfin.index = dfu.index
         return(df.hhiq)
@@ -401,7 +401,7 @@ class comp(wrds_module):
                        4931, 4941]
         """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['sic']
         df[fields] = self.get_fields(fields, data)
         ranges = [range(2833, 2837), range(8731, 8735), range(3570, 3578),
@@ -425,7 +425,7 @@ class comp(wrds_module):
     def _mb0q(self, data):
         """ Return Market-to-Book ratio 0 (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['eqq', 'ceqq']
         df[fields] = self.get_fields(fields, data)
         df['mb0q'] = df.eqq / df.ceqq
@@ -434,7 +434,7 @@ class comp(wrds_module):
     def _mb1q(self, data):
         """ Return Market-to-Book ratio 0 (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['eqq', 'ltq', 'atq']
         df[fields] = self.get_fields(fields, data)
         df['mb1q'] = (df.eqq + df.ltq) / df.atq
@@ -443,7 +443,7 @@ class comp(wrds_module):
     def _mroq(self, data):
         """ Return Operating margin (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['revtq', 'xoprq']
         df[fields] = self.get_fields(fields, data)
         df['mroq'] = df.revtq / df.xoprq
@@ -461,7 +461,7 @@ class comp(wrds_module):
         # ms = df.groupby(gk).gvkey.count().reset_index(name='numfq')
         # df = df.merge(ms, how='left', on=gk)
         # Merge to the data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+['numfq']], how='left', on=key)
         dfin.index = dfu.index
         return(df.numfq)
@@ -469,7 +469,7 @@ class comp(wrds_module):
     def _oaccq(self, data):
         """ Return Operating Accruals (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['actq', 'cheq', 'lctq', 'dlcq']
         l1f = ['l1'+f for f in fields]
         df[fields] = self.get_fields(fields, data)
@@ -481,7 +481,7 @@ class comp(wrds_module):
     def _roa0q(self, data):
         """ Return Return on Assets 0 (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['niq', 'atq']
         df[fields] = self.get_fields(fields, data)
         df['roa0q'] = df.niq / df.atq
@@ -490,7 +490,7 @@ class comp(wrds_module):
     def _xrdq(self, data):
         """ Return Expenses in R&D with 0 when missing values (Quarterly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['xrdq']
         df[fields] = self._get_fund_fields(fields, df)  # Need the raw xrdq
         df.loc[df.xrdq.isna(), 'xrdq'] = 0
@@ -503,7 +503,7 @@ class comp(wrds_module):
     def _act_lct(self, data):
         """ Return Current Ratio (Yearly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['act', 'lct']
         df[fields] = self.get_fields(fields, data)
         df['act_lct'] = df.act / df.lct
@@ -514,7 +514,7 @@ class comp(wrds_module):
         Equals oancf if fyear>=1987 and fopt - oacc if fyear<1987
         """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['fyear', 'oancf', 'fopt', 'oacc']
         df[fields] = self.get_fields(fields, data)
         # Compute the before 1987 measure
@@ -530,7 +530,7 @@ class comp(wrds_module):
     def _eq(self, data):
         """ Return Equity (Yearly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['prcc_f', 'csho']
         df[fields] = self.get_fields(fields, data)
         eq = df.prcc_f * df.csho
@@ -539,7 +539,7 @@ class comp(wrds_module):
     def _flev(self, data):
         """ Return Financial Leverage (Yearly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['dltt', 'dlc', 'eq']
         df[fields] = self.get_fields(fields, data)
         df['flev'] = (df.dltt + df.dlc) / df['eq']
@@ -548,7 +548,7 @@ class comp(wrds_module):
     def _mb(self, data):
         """ Return Market-to-Book ratio (Yearly). """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['eq', 'ceq']
         df[fields] = self.get_fields(fields, data)
         df['m_b'] = df['eq'] / df.ceq
@@ -557,7 +557,7 @@ class comp(wrds_module):
     def _noacc(self, data):
         """ Return non-operating accruals """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['ib', 'dp', 'cfo', 'oacc']
         df[fields] = self.get_fields(fields, data)
         df['noacc'] = df.ib + df.dp - df.cfo - df.oacc
@@ -566,7 +566,7 @@ class comp(wrds_module):
     def _oacc(self, data):
         """ Return Operating Accruals """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['act', 'che', 'lct', 'dlc']
         df[fields] = self.get_fields(fields, data)
         # Get the lag values of the fields
@@ -580,7 +580,7 @@ class comp(wrds_module):
     def _qual(self, data):
         """ Return qualified opinion dummy """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['auop']
         df[fields] = self.get_fields(fields, data)
         # Create the qual dummy
@@ -591,7 +591,7 @@ class comp(wrds_module):
     def _roa(self, data):
         """ Return ROA ( net income / total assets) """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['ib', 'at']
         df[fields] = self.get_fields(fields, data)
         df['roa'] = df.ib / df['at']
@@ -605,7 +605,7 @@ class comp(wrds_module):
                        4931, 4941]
         """
         key = self.key
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         fields = ['sic']
         df[fields] = self.get_fields(fields, data)
         ranges = [range(2830, 2840), range(3570, 3580), range(7370, 7380),
@@ -615,11 +615,11 @@ class comp(wrds_module):
             for i in r:
                 rs = rs + [i]
         # Remove missing values
-        ## sic field is text with 'None' when missing
-        df.loc[df.sic=='None'] = np.nan
+        # ## sic field is text with 'None' when missing
+        # #df.loc[df.sic=='None'] = np.nan
         df = df.dropna()
-        # Convert sic field to Integer
-        df.sic = df.sic.astype(int)
+        # # Convert sic field to Integer
+        # #df.sic = df.sic.astype(int)
         # Create the litigation dummy
         df['techno'] = 0
         df.loc[df.sic.isin(rs), 'techno'] = 1
