@@ -16,13 +16,11 @@ str:
   # Detail Guidance file
   - act_std
   - action
-  - curr
   - diff_code
   - guidance_code
   - measure
   - pdicity
   - range_desc
-  - ticker
   - units
 
 date:
@@ -38,8 +36,6 @@ date:
   - fpedats
   - revdats
   # Detail Guidance file
-  - actdats
-  - anndats
   - mod_date
 
 float32:
@@ -56,12 +52,9 @@ float32:
   - value
   # Detail Guidance file
   - mean_at_date
-  - acttims
-  - anntims
   - eefymo
   - mod_time
   - prd_mon
   - prd_yr
-  - usfirm
   - val_1
   - val_2

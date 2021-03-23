@@ -732,9 +732,10 @@ class wrds_module(data_module):
         """ Obtain the fields of the file 'name' from WRDS postgresql data.
 
         """
+        schema = self.files[name]['schema']
         table = self.files[name]['table']
         sqlstmt = ('SELECT * FROM {schema}.{table} LIMIT 0;'.format(
-                   schema=self.library,
+                   schema=schema,
                    table=table))
         cursor = self.conn.cursor()
         cursor.execute(sqlstmt)
@@ -744,7 +745,9 @@ class wrds_module(data_module):
 
     def _add_fields_to_file(self, name, fields):
         # Get the missing fields
+        schema = self.files[name]['schema']
         table = self.files[name]['table']
+        index = self.files[name]['index']
         print('Downloading fields '+str(fields)+' for module',
               self.__class__.__name__+', table '+table+' from WRDS ... ')
         # Open and update existing file if any
@@ -756,14 +759,13 @@ class wrds_module(data_module):
         filepath_pq_new = filepath_pq + '_new'
 
         # Get approximate row count
-        nrows = self.get_row_count(table)
+        nrows = self.get_row_count(schema, table)
         # SQL query
         cols = ','.join(fields)
-        key = self.files[name]['key']
-        order = ', '.join(key)
+        order = ', '.join(index)
         sqlstmt = ('SELECT {cols} FROM {schema}.{table} ORDER BY {order};'.format(
                    cols=cols,
-                   schema=self.library,
+                   schema=schema,
                    table=table,
                    order=order))
         # Read the SQL table by chunks
@@ -813,16 +815,15 @@ class wrds_module(data_module):
         data_module.set_remote_access(self, remote_access)
         # WRDS Library
         self.wrds_username = wrds_username
-        self.library = self.files['wrds']['library']
         if self.remote_access:
             # First create a pgpass file for subsequent connections
             self.create_pgpass_file()
-            print('Connecting to WRDS library {} ... '.format(self.library), end='', flush=True)
+            print('Connecting module {} to WRDS library ... '.format(self.__class__.__name__), end='', flush=True)
             # self.connwrds = wrds.Connection(wrds_username = wrds_username)
             self.conn = psycopg2.connect("host={} dbname={} user={} port={}".format(WRDS_POSTGRES_HOST,
                 WRDS_POSTGRES_DB, wrds_username, WRDS_POSTGRES_PORT))
-            self.views = self.__get_view_names();
-            self.tables = self.__get_table_names();
+            #self.views = self.__get_view_names();
+            #self.tables = self.__get_table_names();
             print('established.')
             # Add all files supported by the module
             path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
@@ -849,7 +850,7 @@ class wrds_module(data_module):
             tables = curs.fetchall()
             return [t[0] for t in tables]
 
-    def __get_schema_for_view(self, table):
+    def __get_schema_for_view(self, schema, table):
         """
         Internal function for getting the schema based on a view
         """
@@ -870,13 +871,13 @@ class wrds_module(data_module):
                         ON source_ns.oid = source_table.relnamespace
                       WHERE dependent_ns.nspname = '{schema}'
                         AND dependent_view.relname = '{view}';
-                    """.format(schema=self.library, view=table)
+                    """.format(schema=schema, view=table)
         with self.conn.cursor() as curs:
             curs = self.conn.cursor()
             curs.execute(sql_code)
             return curs.fetchone()[0]
 
-    def get_row_count(self, table):
+    def get_row_count(self, schema, table):
         """
             Uses the library and table to get the approximate
               row count for the table.
@@ -887,35 +888,34 @@ class wrds_module(data_module):
             >>> db.get_row_count('wrdssec', 'dforms')
             16378400
         """
-        schema = self.library
-        if 'taq' in self.library:
+        if 'taq' in schema:
             print("The row count will return 0 due to the structure of TAQ")
-        else:
-            if table in self.views:
-                schema = self.__get_schema_for_view(table)
-        if schema:
-            sqlstmt = """
-                SELECT reltuples
-                  FROM pg_class r
-                  JOIN pg_namespace n
-                    ON (r.relnamespace = n.oid)
-                  WHERE r.relkind in ('r', 'f')
-                    AND n.nspname = '{}'
-                    AND r.relname = '{}';
-                """.format(schema, table)
+        #else:
+        #    if table in self.views:
+        #        schema = self.__get_schema_for_view(schema, table)
+        #if schema:
+        sqlstmt = """
+            SELECT reltuples
+              FROM pg_class r
+              JOIN pg_namespace n
+                ON (r.relnamespace = n.oid)
+              WHERE r.relkind in ('r', 'f')
+                AND n.nspname = '{}'
+                AND r.relname = '{}';
+            """.format(schema, table)
 
-            try:
-                with self.conn.cursor() as curs:
-                    curs.execute(sqlstmt)
-                    return int(curs.fetchone()[0])
-            except Exception as e:
-                print(
-                    "There was a problem with retrieving"
-                    "the row count: {}".format(e))
-                return 0
-        else:
-            print("There was a problem with retrieving the schema")
-            return None
+        try:
+            with self.conn.cursor() as curs:
+                curs.execute(sqlstmt)
+                return int(curs.fetchone()[0])
+        except Exception as e:
+            print(
+                "There was a problem with retrieving"
+                "the row count: {}".format(e))
+            return 0
+        #else:
+        #    print("There was a problem with retrieving the schema")
+        #    return None
 
     def create_pgpass_file(self):
         """

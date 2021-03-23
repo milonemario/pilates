@@ -6,18 +6,24 @@
 # Has no limitation on 13F data, so we use this one (library:secsamp).
 # Note: This should be changed once the module supports more data.
 
-# Library (schema) on WRDS Postgresql database
-wrds:
-  library: secsamp
-
 #13F Summary
 summary:
+  schema: secsamp_all
   table: wrds_13f_summary
+  index:
+    - cik
 
 # 13F Holdings
 holdings:
+  schema: secsamp_all
   table: wrds_13f_holdings
+  index:
+    - cik
 
 # Link table
 link:
+  schema: secsamp_all
   table: wrds_13f_link
+  index:
+    - cik
+    - mgrno

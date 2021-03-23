@@ -2,10 +2,9 @@
 # Files for CBOE #
 ##################
 
-# Library (schema) on WRDS Postgresql database
-wrds:
-  library: cboe
-
 # CBOE
 cboe:
+  schema: cboe_all
   table: cboe
+  index:
+    - date

@@ -2,28 +2,45 @@
 # Files for IBES #
 ##################
 
-# Library (schema) on WRDS Postgresql database
-wrds:
-  library: ibes
-
 # ID table
 id:
+  schema: tr_ibes
   table: id
+  index:
+    - ticker
 
 det:
+  schema: tr_ibes
   table: det_epsus
+  index:
+    - ticker
 
 act:
+  schema: tr_ibes
   table: act_epsus
+  index:
+    - ticker
 
 sum:
+  schema: tr_ibes
   table: statsum_epsus
+  index:
+    - ticker
 
 adj:
+  schema: tr_ibes
   table: adj
+  index:
+    - ticker
 
 guidance:
+  schema: tr_ibes_guidance
   table: det_guidance
+  index:
+    - ticker
 
 ptg:
+  schema: tr_ibes
   table: ptgdet
+  index:
+    - ticker

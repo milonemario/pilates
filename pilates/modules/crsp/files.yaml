@@ -2,48 +2,44 @@
 # Files for CRSP #
 ##################
 
-# Library (schema) on WRDS Postgresql database
-wrds:
-  library: crsp
-
 # Compustat-CRSP link table
 linktable:
+  schema: crsp_a_ccm
   table: ccmxpf_lnkhist
-  key:
+  index:
     - gvkey
-    - linkdt
 
 # Monthly Stock File
 msf:
+  schema: crsp_a_stock
   table: msf
-  key:
+  index:
     - permno
-    - date
 
 # Daily Stock File
 dsf:
+  schema: crsp_a_stock
   table: dsf
-  key:
+  index:
     - permno
-    - date
 
 # Stock-Market Indexes Daily
 dsi:
+  schema: crsp_a_stock
   table: dsi
-  key:
+  index:
     - date
 
 # Daily Stock Events
 dse:
+  schema: crsp_a_stock
   table: dse
-  key:
+  index:
     - permno
-    - date
-    - event
 
 # Stock Names
 stocknames:
+  schema: crsp_a_stock
   table: stocknames
-  key:
+  index:
     - permno
-    - namedt

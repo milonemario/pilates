@@ -2,35 +2,32 @@
 # Column types for Thomson Reuters #
 ####################################
 
+Int32:
+  # Type 1
+  - mgrno
+  - typecode
+  - permkey
+  # Type 3
+  - type
+
+
 str:
-  - country
-  - cusip
-  - exchcd
+  # Type 1
   - mgrname
-  - stkcd
-  - stkcdesc
-  - stkname
-  - ticker
-  - ticker2
+  - country
+  # Type 3
+  - cusip
 
 date:
+  # Type 1
   - fdate
   - rdate
-
-datetime64:
-  - prdate # Problem with this field at conversion as mostly NaN
+  # Type 3
 
 float32:
-  - change
-  - indcode
-  - mgrno
-  - no
-  - permkey
-  - prc
-  - shared
+  # Type 1
+  # Type 3
   - shares
-  - shrout1
-  - shrout2
   - sole
-  - type
-  - typecode
+  - shared
+  - no

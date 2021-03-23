@@ -46,21 +46,6 @@ class comp(wrds_module):
         self.consol = ['C']
         self.popsrc = ['D']
 
-    def set_source(self, source):
-        """ Select the source of the compustat data
-        WRDS have either daily or annual updates.
-
-        Args:
-            source (str): 'daily' or 'annual'. By default uses annuala updates.
-
-        """
-        if source == 'daily':
-            self.files[wrds]['library'] = 'comp'
-        elif source == 'annual':
-            self.files[wrds]['library'] = 'comp'
-        else:
-            raise Exception("WRDS only has 'daily' or 'annual' updates.")
-
     def set_frequency(self, frequency):
         """ Define the frequency to use for the Compustat data.
         The corresponding Compustat data 'fund' file (funda or fundq)
