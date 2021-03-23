@@ -46,6 +46,21 @@ class comp(wrds_module):
         self.consol = ['C']
         self.popsrc = ['D']
 
+    def set_source(self, source):
+        """ Select the source of the compustat data
+        WRDS have either daily or annual updates.
+
+        Args:
+            source (str): 'daily' or 'annual'. By default uses annuala updates.
+
+        """
+        if source == 'daily':
+            self.files[wrds]['library'] = 'comp'
+        elif source == 'annual':
+            self.files[wrds]['library'] = 'comp'
+        else:
+            raise Exception("WRDS only has 'daily' or 'annual' updates.")
+
     def set_frequency(self, frequency):
         """ Define the frequency to use for the Compustat data.
         The corresponding Compustat data 'fund' file (funda or fundq)
@@ -510,7 +525,7 @@ class comp(wrds_module):
         return(df.act_lct)
 
     def _cfo(self, data):
-        """ Return cash flow from operations
+        """ Cash flow from operations
         Equals oancf if fyear>=1987 and fopt - oacc if fyear<1987
         """
         key = self.key
@@ -528,7 +543,8 @@ class comp(wrds_module):
         return(df.cfo)
 
     def _eq(self, data):
-        """ Return Equity (Yearly). """
+        """ Equity (Yearly).
+        """
         key = self.key
         df = self.open_data(data, key)
         fields = ['prcc_f', 'csho']
@@ -537,7 +553,7 @@ class comp(wrds_module):
         return(eq)
 
     def _flev(self, data):
-        """ Return Financial Leverage (Yearly). """
+        """ Financial Leverage (Yearly). """
         key = self.key
         df = self.open_data(data, key)
         fields = ['dltt', 'dlc', 'eq']
@@ -546,7 +562,7 @@ class comp(wrds_module):
         return(df.flev)
 
     def _mb(self, data):
-        """ Return Market-to-Book ratio (Yearly). """
+        """ Market-to-Book ratio (Yearly). """
         key = self.key
         df = self.open_data(data, key)
         fields = ['eq', 'ceq']
@@ -555,7 +571,16 @@ class comp(wrds_module):
         return(df.m_b)
 
     def _noacc(self, data):
-        """ Return non-operating accruals """
+        """ Non-operating accruals
+
+        Non-operating accruals are:
+
+        Net income before extraordinary items (ib)
+        + Depreciation (dp)
+        - Cash flow from operations (_cfo)
+        - Operatig accruals (_oacc)
+
+        """
         key = self.key
         df = self.open_data(data, key)
         fields = ['ib', 'dp', 'cfo', 'oacc']
@@ -564,7 +589,12 @@ class comp(wrds_module):
         return(df.noacc)
 
     def _oacc(self, data):
-        """ Return Operating Accruals """
+        """ Operating Accruals
+
+        Operating accruals are chages in non-cash assets (act-che)
+        minus changes in current liabilities (lct-dlc) exluding short-term debt.
+
+        """
         key = self.key
         df = self.open_data(data, key)
         fields = ['act', 'che', 'lct', 'dlc']

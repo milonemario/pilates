@@ -18,8 +18,10 @@ class bhl(data_module):
 
     def __init__(self, d):
         data_module.__init__(self, d)
+        self.key = ['date']
+        self.col_date = 'date'
 
-    def add_file(self, name, path, force=False, types=None):
+    def add_file_old(self, name, path, force=False, types=None):
         """ Add a file to the module.
         Converts and make the file available for the module to use.
 
@@ -60,17 +62,25 @@ class bhl(data_module):
         # Link the name to the actual filename
         setattr(self, name, filename)
 
-    def get_fields(self, data, fields):
-        key = ['year', 'month']
+    def select_source(self, source):
+        if source in self.files.keys():
+            self.add_file(source)
+            self.bhl = getattr(self, source)
+        else:
+            raise Exception("The available sources for BHL data "
+                            "are "+str(self.files.keys()))
 
-        df = self.open_data(self.bhl, key+fields)
-        # Merge to the user data
+    def get_fields(self, data, fields):
+        df = self.open_data(self.bhl, self.key+fields)
+        # User data
         dfu = self.open_data(data, [self.d.col_date])
-        # Extract year and month from user data
-        dt = pd.to_datetime(dfu[self.d.col_date]).dt
-        dfu['year'] = dt.year
-        dfu['month'] = dt.month
         # Merge
-        dfin = dfu.merge(df, how='left', on=key)
+        dfu = dfu.sort_values(self.d.col_date)
+        df = df.sort_values(self.col_date)
+        dfin = pd.merge_asof(dfu, df,
+                             left_on=self.d.col_date,
+                             right_on=self.col_date,
+                             tolerance=pd.Timedelta('31 day'),
+                             direction='nearest')
         dfin.index = dfu.index
         return(dfin[fields])

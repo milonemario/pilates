@@ -10,7 +10,7 @@ as Compustat, CRSP, IBES, FRED, etc.
 
 # import sys
 import os, sys, getpass, stat
-import wget, tarfile, gzip
+import wget, tarfile, gzip, zipfile
 import pathlib
 import yaml
 import numpy as np
@@ -20,6 +20,7 @@ import pyarrow.parquet as pq
 import multiprocessing as mp
 import importlib
 import psycopg2
+from openpyxl import load_workbook
 # import dask.dataframe as dd
 
 # Remove warning messages for chained assignments
@@ -277,32 +278,29 @@ class data_module:
         """ Return the full path (with extenssion) of the file to dowload.
         The file can be  a compressed file.
         """
-        url = self.files[name]['url']
-        filename, ext = os.path.splitext(os.path.basename(url))
-        filepath_ext = self.d.datadownload + filename + ext
+        #url = self.files[name]['url']
+        filename = self.files[name]['file']
+        filepath_ext = self.d.datadownload + filename
         return filepath_ext
 
     def _path(self, name):
         """ Return the full path (with extension) of the file to be converted.
         The file is an uncompressed file
         """
-        url = self.files[name]['url']
-        filename, ext = os.path.splitext(os.path.basename(url))
-        filetype = self.files[name]['type']
-        path = self.d.datadownload + filename + '.' + filetype
+        if 'file' in self.files[name].keys():
+            path = self.d.datadownload + self.files[name]['file']
+        else:
+            url = self.files[name]['url']
+            filename, ext = os.path.splitext(os.path.basename(url))
+            filetype = self.files[name]['type']
+            path = self.d.datadownload + filename + '.' + filetype
         return path
 
     def _filepath_pq(self, name):
         """ Return the full path of the parquet file to be used by the module.
         """
         if name in self.files.keys():
-            if 'url' in self.files[name].keys():
-                url = self.files[name]['url']
-                filename, ext = os.path.splitext(os.path.basename(url))
-            elif name in self.files.keys() and 'table' in self.files[name].keys():
-                filename = self.files[name]['table']
-            else:
-                filename = name
+            filename = self.__class__.__name__ + '_' + name
         else:
             filename = name
         filename_pq = self.d.datadir + filename + '.parquet'
@@ -321,6 +319,16 @@ class data_module:
                 raise Exception("The file name provided is incorrect. "
                                 "Module "+self.__class__.__name__+"supports "
                                 "the following files: "+str(list(self.files.keys())))
+
+    def _write_to_parquet(self, df, name):
+        filepath_pq = self._filepath_pq(name)
+        df = df[df.columns.dropna()]
+        df.columns = map(str.lower, df.columns)  # Lower case col names
+        df = self._correct_columns_types(df)
+        t = pa.Table.from_pandas(df)
+        pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
+        pqwriter.write_table(t)
+        pqwriter.close()
 
     def _convert_data_by_chunks(self, f, filepath_pq, nrows):
         """ Convert the file by chunks
@@ -384,6 +392,9 @@ class data_module:
             print('Conversion '+name)
             # Get the file type
             filename, ext = os.path.splitext(os.path.basename(path))
+            # Ovewride the file type if provided
+            if 'type' in self.files[name]:
+                ext = '.' + self.files[name]['type']
             # Open the file (by chunks)
             if ext == '.sas7bdat':
                 f = pd.read_sas(path, chunksize=self.d.chunksize)
@@ -401,15 +412,24 @@ class data_module:
                 nrows = f_tmp.shape[0]
                 del(f_tmp)
                 self._convert_data_by_chunks(f, filepath_pq, nrows)
-            elif ext in ['xls', 'xlsx']:
+            elif ext in ['.xls']:
                 # Open the file
-                df = pd.read_excel(path, nrows=nrows)
-                # For excel files write the full data at once (not by chunks)
-                df.columns = map(str.lower, df.columns)  # Lower case col names
-                t = pa.Table.from_pandas(df)
-                pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
-                pqwriter.write_table(t)
-                pqwriter.close()
+                sheet_name = self.files[name]['sheet']
+                df = pd.read_excel(path, sheet_name=sheet_name, nrows=nrows)
+                # For Excel files, writes the whole file directly
+                self._write_to_parquet(df, name)
+            elif ext in ['.xlsx']:
+                wb = load_workbook(path)
+                ws = wb[self.files[name]['sheet']]
+                data = ws.values
+                cols = next(data)
+                if nrows:
+                    data = list(data)[0:nrows-1]
+                else:
+                    data = list(data)
+                df = pd.DataFrame(data, columns=cols)
+                # For Excel files, writes the whole file directly
+                self._write_to_parquet(df, name)
             else:
                 raise Exception("This file format is not currently "
                                 "supported. Supported formats are: "
@@ -541,16 +561,22 @@ class data_module:
         filepath_ext = self._filepath_ext(name)
         _, ext = os.path.splitext(os.path.basename(url))
         path = self._path(name)
-        # Download the file
-        if not os.path.exists(filepath_ext):
-            print('Download file '+name+' for module '+self.__class__.__name__+' ...')
-            wget.download(url, filepath_ext)
-        # Uncompress file if needed
-        if ext == '.gz':
-            f = gzip.open(filepath_ext, 'rt')
-            content = f.read()
-            with open(path, 'w') as fn:
-                fn.write(content)
+        if not os.path.exists(path):
+            # Download the file
+            if not os.path.exists(path):
+                print('Download file '+name+' for module '+self.__class__.__name__+' ...')
+                wget.download(url, self.d.datadownload)
+                print('\n')
+            # Uncompress file or packages if needed
+            if ext == '.gz':
+                # Here: only supports one compressed file
+                f = gzip.open(filepath_ext, 'rt')
+                content = f.read()
+                with open(path, 'w') as fn:
+                    fn.write(content)
+            elif ext == '.zip':
+                with zipfile.ZipFile(filepath_ext, 'r') as zip_ref:
+                    zip_ref.extractall(self.d.datadownload)
 
     def add_file(self, name, path=None, force=False,
                  # For CSV files
@@ -733,10 +759,13 @@ class wrds_module(data_module):
         nrows = self.get_row_count(table)
         # SQL query
         cols = ','.join(fields)
-        sqlstmt = ('SELECT {cols} FROM {schema}.{table};'.format(
+        key = self.files[name]['key']
+        order = ', '.join(key)
+        sqlstmt = ('SELECT {cols} FROM {schema}.{table} ORDER BY {order};'.format(
                    cols=cols,
                    schema=self.library,
-                   table=table))
+                   table=table,
+                   order=order))
         # Read the SQL table by chunks
         cursor = self.conn.cursor(name='mycursor')
         cursor.itersize = self.d.chunksize

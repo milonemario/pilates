@@ -1,0 +1,24 @@
+######################
+# Files for JLN data #
+######################
+
+# Financial Uncertainty
+financial:
+  url: https://www.sydneyludvigson.com/s/MacroFinanceUncertainty_202102Update.zip
+  file: FinancialUncertaintyToCirculate.xlsx
+  type: xls
+  sheet: Total Financial Uncertainty
+
+# Macro Uncertainty
+macro:
+  url: https://www.sydneyludvigson.com/s/MacroFinanceUncertainty_202102Update.zip
+  file: MacroUncertaintyToCirculate.xlsx
+  type: xls
+  sheet: Total Macro Uncertainty
+
+# Real Uncertainty
+real:
+  url: https://www.sydneyludvigson.com/s/MacroFinanceUncertainty_202102Update.zip
+  file: RealUncertaintyToCirculate.xlsx
+  type: xls
+  sheet: Total Real Uncertainty

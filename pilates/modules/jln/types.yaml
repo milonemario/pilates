@@ -1,0 +1,10 @@
+########################
+# Column types for JLN #
+########################
+
+Int32:
+  - year
+  - month
+  
+date:
+  - date

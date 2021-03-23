@@ -4,16 +4,24 @@
 
 # Library (schema) on WRDS Postgresql database
 wrds:
-  library: comp
+  library: compa
 
 # Firm informations (SIC, ...)
 names:
   table: names
+  key:
+    - gvkey
 
 # Fundamental Annual data
 funda:
   table: funda
+  key:
+    - gvkey
+    - datadate
 
 # Fundamental Quarterly data
 fundq:
   table: fundq
+  key:
+    - gvkey
+    - datadate

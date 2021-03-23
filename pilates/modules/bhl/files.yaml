@@ -1,0 +1,16 @@
+######################
+# Files for BHL data #
+######################
+
+# Full BHL data winsorized
+full:
+  url: http://mariehoerova.net/RA_UC_series.xls
+  file: RA_UC_series.xls
+  type: xls
+  sheet: Estimates 1990-2020 sample
+
+2010:
+  url: http://mariehoerova.net/RA_UC_series.xls
+  file: RA_UC_series.xls
+  type: xls
+  sheet: Estimates 1990-2010 sample

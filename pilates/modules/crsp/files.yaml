@@ -9,23 +9,41 @@ wrds:
 # Compustat-CRSP link table
 linktable:
   table: ccmxpf_lnkhist
+  key:
+    - gvkey
+    - linkdt
 
 # Monthly Stock File
 msf:
   table: msf
+  key:
+    - permno
+    - date
 
 # Daily Stock File
 dsf:
   table: dsf
+  key:
+    - permno
+    - date
 
 # Stock-Market Indexes Daily
 dsi:
   table: dsi
+  key:
+    - date
 
 # Daily Stock Events
 dse:
   table: dse
+  key:
+    - permno
+    - date
+    - event
 
 # Stock Names
 stocknames:
   table: stocknames
+  key:
+    - permno
+    - namedt

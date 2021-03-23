@@ -1,0 +1,17 @@
+########################
+# Column types for EPU #
+########################
+
+Int32:
+  - permno
+  - gvkey
+  - year
+  # Country data
+  - month
+  # Firm level data
+  - sic_3_digit
+
+str:
+  # Firm level data
+  - ncusip
+  - ticker

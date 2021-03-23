@@ -3,12 +3,15 @@
 #######################
 
 # Country data
-epu_country:
+country:
   url: https://www.policyuncertainty.com/media/All_Country_Data.xlsx
+  file: All_Country_Data.xlsx
   type: xlsx
+  sheet: EPU
 
 # Firm data
-epu_firm:
-  url: https://scholar.rhsmith.umd.edu/sites/default/files/sbrown/files/pins_vdj_qtr.asc_.gz
-  type: csv
-  delim_whitespace: True
+firm:
+  url: https://www.policyuncertainty.com/media/Alfaro_Bloom_Lin_FUM_IVS.xlsx
+  file: Alfaro_Bloom_Lin_FUM_IVS.xlsx
+  type: xlsx
+  sheet: AlfaroBL_firm_uncertainty_IVs

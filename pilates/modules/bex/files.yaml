@@ -1,0 +1,17 @@
+######################
+# Files for BEX data #
+######################
+
+# Monthly Index
+monthly:
+  url: https://00d45e45-360f-43e4-a918-f4397267026f.filesusr.com/ugd/efd0b7_a96b1d324aea4a258b716c75c2a9696b.xlsx?dn=BEX_Indices_20210321.xlsx
+  file: BEX_Indices_20210321.xlsx
+  type: xls
+  sheet: DATA_PLOT_monthly
+
+# Daily Index
+daily:
+  url: https://00d45e45-360f-43e4-a918-f4397267026f.filesusr.com/ugd/efd0b7_a96b1d324aea4a258b716c75c2a9696b.xlsx?dn=BEX_Indices_20210321.xlsx
+  file: BEX_Indices_20210321.xlsx
+  type: xls
+  sheet: DATA_PLOT_daily

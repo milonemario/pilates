@@ -20,5 +20,7 @@ setup(name='pilates',
             'psycogpg2',
             'wget',
             'gzip',
+            'xlrd',
+            'openpyxl'
       ],
       zip_safe=False)
