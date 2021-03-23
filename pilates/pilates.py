@@ -720,6 +720,8 @@ class wrds_module(data_module):
     """ Module class for all modules that use WRDS data.
 
     """
+    # WRDS connections
+    conn = {}
 
     def __init__(self, d):
         data_module.__init__(self, d)
@@ -816,21 +818,25 @@ class wrds_module(data_module):
         # WRDS Library
         self.wrds_username = wrds_username
         if self.remote_access:
-            # First create a pgpass file for subsequent connections
-            self.create_pgpass_file()
-            print('Connecting module {} to WRDS library ... '.format(self.__class__.__name__), end='', flush=True)
-            # self.connwrds = wrds.Connection(wrds_username = wrds_username)
-            self.conn = psycopg2.connect("host={} dbname={} user={} port={}".format(WRDS_POSTGRES_HOST,
-                WRDS_POSTGRES_DB, wrds_username, WRDS_POSTGRES_PORT))
-            #self.views = self.__get_view_names();
-            #self.tables = self.__get_table_names();
-            print('established.')
-            # Add all files supported by the module
-            path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
-            with open(path_files) as f:
-                names = yaml.full_load(f)
-                for name in names.keys():
-                    setattr(self, name, name)
+            # Check if already a connection from this WRDS user
+            if self.wrds_username not in wrds_module.conn.keys():
+                # First create a pgpass file for subsequent connections
+                self.create_pgpass_file()
+                print('Connecting user {} to WRDS database ... '.format(self.wrds_username), end='', flush=True)
+                # self.connwrds = wrds.Connection(wrds_username = wrds_username)
+                wrds_module.conn[self.wrds_username] = psycopg2.connect("host={} dbname={} user={} port={}".format(WRDS_POSTGRES_HOST,
+                    WRDS_POSTGRES_DB, wrds_username, WRDS_POSTGRES_PORT))
+                #self.views = self.__get_view_names();
+                #self.tables = self.__get_table_names();
+                print('established.')
+                # Add all files supported by the module
+                path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
+                with open(path_files) as f:
+                    names = yaml.full_load(f)
+                    for name in names.keys():
+                        setattr(self, name, name)
+            # Make the connection available to the module
+            self.conn = wrds_module.conn[self.wrds_username]
 
     ########################################
     # Replicate some wrds module functions #
