@@ -842,47 +842,6 @@ class wrds_module(data_module):
     # Replicate some wrds module functions #
     ########################################
 
-    def __get_view_names(self):
-        sqlcode = "select viewname from pg_catalog.pg_views;"
-        with self.conn.cursor() as curs:
-            curs.execute(sqlcode)
-            views = curs.fetchall()
-            return [v[0] for v in views]
-
-    def __get_table_names(self):
-        sqlcode = "select tablename from pg_catalog.pg_tables;"
-        with self.conn.cursor() as curs:
-            curs.execute(sqlcode)
-            tables = curs.fetchall()
-            return [t[0] for t in tables]
-
-    def __get_schema_for_view(self, schema, table):
-        """
-        Internal function for getting the schema based on a view
-        """
-        sql_code = """SELECT distinct(source_ns.nspname) AS source_schema
-                      FROM pg_depend
-                      JOIN pg_rewrite
-                        ON pg_depend.objid = pg_rewrite.oid
-                      JOIN pg_class as dependent_view
-                        ON pg_rewrite.ev_class = dependent_view.oid
-                      JOIN pg_class as source_table
-                        ON pg_depend.refobjid = source_table.oid
-                      JOIN pg_attribute
-                        ON pg_depend.refobjid = pg_attribute.attrelid
-                          AND pg_depend.refobjsubid = pg_attribute.attnum
-                      JOIN pg_namespace dependent_ns
-                        ON dependent_ns.oid = dependent_view.relnamespace
-                      JOIN pg_namespace source_ns
-                        ON source_ns.oid = source_table.relnamespace
-                      WHERE dependent_ns.nspname = '{schema}'
-                        AND dependent_view.relname = '{view}';
-                    """.format(schema=schema, view=table)
-        with self.conn.cursor() as curs:
-            curs = self.conn.cursor()
-            curs.execute(sql_code)
-            return curs.fetchone()[0]
-
     def get_row_count(self, schema, table):
         """
             Uses the library and table to get the approximate
@@ -896,10 +855,6 @@ class wrds_module(data_module):
         """
         if 'taq' in schema:
             print("The row count will return 0 due to the structure of TAQ")
-        #else:
-        #    if table in self.views:
-        #        schema = self.__get_schema_for_view(schema, table)
-        #if schema:
         sqlstmt = """
             SELECT reltuples
               FROM pg_class r
@@ -919,9 +874,6 @@ class wrds_module(data_module):
                 "There was a problem with retrieving"
                 "the row count: {}".format(e))
             return 0
-        #else:
-        #    print("There was a problem with retrieving the schema")
-        #    return None
 
     def create_pgpass_file(self):
         """

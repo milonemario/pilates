@@ -4,14 +4,14 @@
 
 # Type 1: Institutional Manager Characteristics
 type1:
-  schema: tf_13f
+  schema: tr_13f
   table: s34type1
   index:
     - mgrno
 
 # Type 3: Stock Holdings
 type3:
-  schema: tf_13f
+  schema: tr_13f
   table: s34type3
   index:
     - mgrno
