@@ -60,7 +60,7 @@ class crsp(wrds_module):
         cond1 = (pd.notna(dm.linkenddt) &
                  (dm[self.d.col_date] >= dm.linkdt) &
                  (dm[self.d.col_date] <= dm.linkenddt))
-        cond2 = (pd.isna(dm.linkenddt) & (dm['datadate'] >= dm.linkdt))
+        cond2 = (pd.isna(dm.linkenddt) & (dm.datadate >= dm.linkdt))
         dm = dm[cond1 | cond2]
         # Rename lpermno to permno and remove unnecessary columns
         dm = dm.rename(columns={'lpermno': 'permno'})
@@ -287,10 +287,10 @@ class crsp(wrds_module):
         Return the daily volatility of returns over 'nperiods' periods.
         If using daily frequency, one period refers to one day.
         If using monthly frequency, one period refers to on month.
-        Arguments:
+
+        Args:
             data -- User data.
                     Required columns: [permno, 'col_date']
-            col_date -- Column of the dates at which to compute the return
             nperiods -- Number of periods to use to compute the volatility.
                         If positive, compute the volatility over
                         'nperiods' in the future. If negative, compute the
@@ -313,15 +313,17 @@ class crsp(wrds_module):
 
     def average_bas(self, data, nperiods=1, useall=True, bas=None):
         r"""
-        Return the daily average bid-ask spread over 'ndays' days.
-        Arguments:
+        Return the daily average bid-ask spread over 'nperiods' periods.
+        If using daily frequency, one period refers to one day.
+        If using monthly frequency, one period refers to on month.
+
+        Args:
             data -- User data.
                     Required columns: [permno, 'col_date']
-            col_date -- Column of the dates at which to compute the return
-            ndays --    Number of days to use to compute the bid-ask spread.
-                        If positive, compute the bid-ask spread over
-                        'ndays' in the future. If negative, compute the
-                        bid-ask spread over abs(ndays) in the past.
+            nperiods -- Number of periods to use to compute the volatility.
+                        If positive, compute the average bid-ask spread over
+                        'nperiods' in the future. If negative, compute the
+                        average bid-ask spread over abs(nperiods) in the past.
             useall --  If True, use the bid-ask spread of the last
                         available trading date (if ndays<0) or the
                         bid-ask spread of the next available trading day
@@ -412,20 +414,36 @@ class crsp(wrds_module):
         return(self._value_for_data(turnover, data, nperiods, useall))
 
     def age(self, data):
-        """ Age of the firm - Number of years with return history. """
-        # Open the necessary data
-        key = [self.col_id, self.col_date]
-        fields = ['ret']
-        sf = self._get_fields(fields)
-        mindate = sf.groupby(self.col_id).date.min()
-        mindate.name = 'mindate'
-        # Merge the min date to user data
-        cols_data = [self.col_id, self.d.col_date]
+        """ Age of the firm - Number of years with return history.
+
+        When no information is available from CRSP, computes the age with
+        the user data (assumes the user data is 'complete'). Otherwise, age
+        is the max of the user data's age and CRSP age.
+
+        """
+        # Use the stocknames table to obtain the date range of permno identifiers
+        sn = self.open_data(self.stocknames, [self.col_id, 'namedt', 'nameenddt'])
+        # Open the user data
+        cols_data = [self.d.col_id, self.d.col_date, self.col_id]
         dfu = self.open_data(data, cols_data)
         index = dfu.index
-        dfin = dfu.merge(mindate, how='left', on=self.col_id)
-        dfin['age'] = (dfin[self.d.col_date] - dfin.mindate).dt.days / 365.
-        dfin.index = index
+        # Compte age using user data only first
+        dfin = dfu.copy()
+        dfin['mindate'] = dfu.groupby(self.d.col_id)[self.d.col_date].transform('min')
+        dfin['age_data'] = dfin[self.d.col_date] - dfin.mindate
+        # Compute the age with CRSP data
+        ## Min date per permno
+        sn = sn.groupby(self.col_id)['namedt'].min().reset_index()
+        sn = self._correct_columns_types(sn)
+        ## Merge start with user data
+        dfin = dfin.merge(sn, how='left', on='permno')
+        ## Compute age with earliest crsp date by user data id (gvkey if so)
+        dfin['age_crsp'] = dfin[self.d.col_date] - dfin.namedt
+        # Get the final age (max of data and crsp)
+        dfin['age'] = dfin.age_data
+        dfin.loc[dfin.age_crsp > dfin.age, 'age'] = dfin.age_crsp
+        dfin['age'] = dfin.age.dt.days / 365.
+        dfin.index = dfu.index
         return(dfin.age)
 
     def beta(self, data, ndays=1, useall=True):

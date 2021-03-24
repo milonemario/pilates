@@ -8,86 +8,126 @@ Int32:
   - gvkey
   - lpermno
   - lpermco
-  # CRSP
+  # msf
   - permno
   - permco
+  - issuno
+  - hexcd
+  - hsiccd
+  - shrout
+  # mse
+  - hsicmg
+  - hsicig
   - dlstcd
+  - shrflg
+  - shrcd
+  - exchcd
+  - siccd
+  - compno
+  - distcd
+  - facpr
+  - facshr
+  - acperm
+  - accomp
+  - trtscd
+  - nmsind
+  - mmcnt
+  - nsdinx
+  # dsf
+  # dsi
+  - totcnt
+  - usdcnt
+  # dse
+  - dlstcd
+  # stocknames
+
 
 string:
   # Linktable
   - linkprim
   - liid
   - linktype
-  # CRSP
-  - comnam
+  # msf
   - cusip
-  - naics
+  # mse
+  - event
+  - comnam
   - ncusip
-  - primexch
-  - secstat
   - shrcls
   - ticker
-  - trdstat
   - tsymbol
+  - naics
+  - primexch
+  - trdstat
+  - secstat
+  # msenames
+  - ticker
+  # dsf
+  # dsi
+  # dse
+  # stocknames
+  - namedum
+
 
 date:
   # Linktable
   - linkdt
   - linkenddt
-  # CRSP
+  # msf
   - date
   - altprcdt
+  # mse
   - dclrdt
   - dlpdt
-  - nameendt
   - nextdt
   - paydt
   - rcrddt
+  - nameendt
   - shrenddt
+  - trtsenddt
+  # msename
+  - namedt
+  # dsf
+  # dsi
+  # dse
+  # stocknames
+  - st_date
+  - end_date
+
 
 float32:
-  # CRSP
-  - accomp
-  - acperm
-  - ask
-  - askhi
-  - bid
+  # msf
   - bidlo
+  - askhi
+  - prc
+  - vol
+  - ret
+  - bid
+  - ask
+  - altprc
+  - spread
+  - retx
+  # mse
+  - dlamt
+  - divamt
+  - nwperm
+  - nwcomp
+  - dlretx
+  - dlpcr
+  - dlret
   - cfacpr
   - cfacshr
-  - distcd
-  - divamt
-  - dlamt
-  - dlprc
-  - dlret
-  - dlretx
-  #- dlstcd
-  - ewretd
-  - ewretx
-  - exchcd
-  - facpr
-  - facshr
-  - hexcd
-  - hsiccd
-  - hsicig
-  - hsicmg
-  - issuno
-  - mmcnt
-  - nmsind
-  - nsdinx
-  - numtrd
-  - nwperm
+  # dsf
   - openprc
-  #- permco
-  - prc
-  - ret
-  - retx
-  - shrcd
-  - shrflg
-  - shrout
-  - siccd
-  - sprtrn
-  - trtscd
-  - vol
+  - numtrd
+  # dsi
   - vwretd
   - vwretx
+  - ewretd
+  - ewretx
+  - sprtrn
+  - spindx
+  - totval
+  - usdval
+  # dse
+  # stocknames

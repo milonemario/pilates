@@ -226,6 +226,15 @@ class data:
         else:
             raise Exception("The type of date must be in ['date', 'year'].")
 
+    def set_id_column(self, col_id):
+        """ Define the id column to use for the user's data.
+
+        Args:
+            col_id (str): name of the columns to be used as the id column.
+
+        """
+        self.col_id = col_id
+
     def set_cores_no(self, cores):
         """ Set the number of cores to use for parallel computations.
 
