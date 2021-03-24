@@ -2,7 +2,7 @@
 # Column types for IBES data #
 ##############################
 
-str:
+string:
   # Detail file
   - cname
   - curr

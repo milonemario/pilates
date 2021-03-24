@@ -10,7 +10,8 @@ Int32:
   # Annual data
   - sic
 
-str:
+# Pandas Nullable string type
+string:
   # Annual Data
   - acctchg
   - acctstd

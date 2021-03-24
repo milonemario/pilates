@@ -87,11 +87,12 @@ class crsp(wrds_module):
         cs = dfu.drop_duplicates()
         pc = self.open_data(self.msenames, ['ncusip', 'permno'])
         pc = pc.drop_duplicates()
-        cs = cs.merge(pc, how='left', left_on=['cusip'], right_on=['ncusip'])
-        csf = cs[['cusip', 'permno']].dropna().drop_duplicates()
+        # Merge the permno
+        csf = cs.merge(pc, how='left', left_on=['cusip'], right_on=['ncusip'])
+        csf = csf[['cusip', 'permno']].dropna().drop_duplicates()
         dfin = dfu.merge(csf, how='left', on='cusip')
         dfin.index = dfu.index
-        return(dfin.permno.astype('float32'))
+        return(dfin.permno)
 
     def _adjust_shares(self, data, col_shares):
         """ Adjust the number of shares using CRSP cfacshr field.

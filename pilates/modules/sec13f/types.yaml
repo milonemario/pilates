@@ -6,7 +6,7 @@ Int32:
   # Linktable
   - mgrno
 
-str:
+string:
   # Holdings data
   - cik
   - coname

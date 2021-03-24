@@ -11,7 +11,7 @@ Int32:
   - type
 
 
-str:
+string:
   # Type 1
   - mgrname
   - country

@@ -274,18 +274,21 @@ class data_module:
     # Helper functions for handling file conversion and other #
     ###########################################################
 
-    def _filepath_ext(self, name):
-        """ Return the full path (with extenssion) of the file to dowload.
-        The file can be  a compressed file.
+    def _download_path(self, name):
+        """ Return the full path of the file to download.
+        The file can be a compressed file.
         """
-        #url = self.files[name]['url']
-        filename = self.files[name]['file']
-        filepath_ext = self.d.datadownload + filename
-        return filepath_ext
+        if 'download_file' in self.files[name].keys():
+            path = self.d.datadownload + self.files[name]['download_file']
+        else:
+            url = self.files[name]['url']
+            filename = os.path.basename(url)
+            path = self.d.datadownload + filename
+        return path
 
     def _path(self, name):
         """ Return the full path (with extension) of the file to be converted.
-        The file is an uncompressed file
+        The file is an uncompressed file.
         """
         if 'file' in self.files[name].keys():
             path = self.d.datadownload + self.files[name]['file']
@@ -557,26 +560,25 @@ class data_module:
         self.remote_access = remote_access
 
     def download_file(self, name):
-        url = self.files[name]['url']
-        filepath_ext = self._filepath_ext(name)
-        _, ext = os.path.splitext(os.path.basename(url))
+        download_path = self._download_path(name)
+        _, ext = os.path.splitext(download_path)
         path = self._path(name)
-        if not os.path.exists(path):
-            # Download the file
-            if not os.path.exists(path):
-                print('Download file '+name+' for module '+self.__class__.__name__+' ...')
-                wget.download(url, self.d.datadownload)
-                print('\n')
-            # Uncompress file or packages if needed
-            if ext == '.gz':
-                # Here: only supports one compressed file
-                f = gzip.open(filepath_ext, 'rt')
-                content = f.read()
-                with open(path, 'w') as fn:
-                    fn.write(content)
-            elif ext == '.zip':
-                with zipfile.ZipFile(filepath_ext, 'r') as zip_ref:
-                    zip_ref.extractall(self.d.datadownload)
+        if not os.path.exists(download_path):
+            # Download the file (could be package)
+            # It might be that it redownloads the package again.
+            print('Download file '+name+' for module '+self.__class__.__name__+' ...')
+            wget.download(url, self.d.datadownload)
+            print('\n')
+        # Uncompress file or packages if needed
+        if ext == '.gz':
+            # Here: only supports one compressed file
+            f = gzip.open(download_path, 'rt')
+            content = f.read()
+            with open(path, 'w') as fn:
+                fn.write(content)
+        elif ext == '.zip':
+            with zipfile.ZipFile(download_path, 'r') as zip_ref:
+                zip_ref.extractall(self.d.datadownload)
 
     def add_file(self, name, path=None, force=False,
                  # For CSV files
@@ -600,18 +602,15 @@ class data_module:
         if not hasattr(self, name):
             if self.remote_access and not path:
                 # Module is requested the fetch the file by itself
-                url = self.files[name]['url']
-                # Get extension
-                filepath_ext = self._filepath_ext(name)
+                ## Path of the final file to convert
                 path = self._path(name)
-                filepath_pq = self._filepath_pq(name)
-                if not os.path.exists(filepath_pq):
+                if not os.path.exists(path):
                     self.download_file(name)
-                    # Set arguments
-                    if 'delim_whitespace' in self.files[name].keys():
-                        delim_whitespace = self.files[name]['delim_whitespace']
-                    if 'nrows' in self.files[name].keys():
-                        nrows = self.files[name]['nrows']
+                # Set arguments for file conversion
+                if 'delim_whitespace' in self.files[name].keys():
+                    delim_whitespace = self.files[name]['delim_whitespace']
+                if 'nrows' in self.files[name].keys():
+                    nrows = self.files[name]['nrows']
             elif not path:
                 raise Exception('The module is not set to getch remote files '
                                 'and no file path is provided.')
@@ -829,14 +828,14 @@ class wrds_module(data_module):
                 #self.views = self.__get_view_names();
                 #self.tables = self.__get_table_names();
                 print('established.')
-                # Add all files supported by the module
-                path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
-                with open(path_files) as f:
-                    names = yaml.full_load(f)
-                    for name in names.keys():
-                        setattr(self, name, name)
             # Make the connection available to the module
             self.conn = wrds_module.conn[self.wrds_username]
+            # Add all files supported by the module
+            path_files = _modules_dir + self.__class__.__name__ + '/files.yaml'
+            with open(path_files) as f:
+                names = yaml.full_load(f)
+                for name in names.keys():
+                    setattr(self, name, name)
 
     ########################################
     # Replicate some wrds module functions #

@@ -5,11 +5,15 @@
 # Annual data
 ann:
   url: https://scholar.rhsmith.umd.edu/sites/default/files/sbrown/files/pins_vdj_ann.asc_.gz
+  download_file: pins_vdj_ann.asc_.gz
+  file: pins_vdj_ann.asc_
   type: csv
   delim_whitespace: True
 
 # Quarterly data
 qtr:
   url: https://scholar.rhsmith.umd.edu/sites/default/files/sbrown/files/pins_vdj_qtr.asc_.gz
+  download_file: pins_vdj_qtr.asc_.gz
+  file: pins_vdj_qtr.asc_
   type: csv
   delim_whitespace: True

@@ -13,7 +13,7 @@ Int32:
   - permco
   - dlstcd
 
-str:
+string:
   # Linktable
   - linkprim
   - liid

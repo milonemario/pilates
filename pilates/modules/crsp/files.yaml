@@ -16,6 +16,20 @@ msf:
   index:
     - permno
 
+# Monthly Stock Events
+mse:
+  schema: crsp_a_stock
+  table: mse
+  index:
+    - permno
+
+# Monthly Stock Events Names
+msenames:
+  schema: crsp_a_stock
+  table: msenames
+  index:
+    - permno
+
 # Daily Stock File
 dsf:
   schema: crsp_a_stock

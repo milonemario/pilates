@@ -11,7 +11,7 @@ Int32:
   # Firm level data
   - sic_3_digit
 
-str:
+string:
   # Firm level data
   - ncusip
   - ticker
