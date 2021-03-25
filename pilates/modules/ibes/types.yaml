@@ -2,59 +2,91 @@
 # Column types for IBES data #
 ##############################
 
+Int32:
+  # id
+  - dilfac
+  - usfirm
+  # det_epsus
+  - estimator
+  - analys
+  - acttims
+  - revtims
+  - anntims
+  - acctims_act
+  # act_epsus
+  # adj
+  # det_guidance
+  - range_desc
+  - diff_code
+  - act_std
+  - guidance_code
+  - mod_time
+  - prd_yr
+  - prd_mon
+  - eefymo
+  # ptgdet
+  - horizon
+  - amaskcd
+
+
 string:
-  # Detail file
-  - cname
-  - curr
-  - curr_act
-  - currfl
+  # id
+  - ticker
   - cusip
   - oftic
+  - cname
+  - pdi
+  - ccopcf
+  - mscip     # Not sure if not int
+  - uai       # Not sure if not int
+  # det_epsus
+  - currfl
   - pdf
-  - report_curr
-  - ticker
-  # Detail Guidance file
-  - act_std
-  - action
-  - diff_code
-  - guidance_code
+  - fpi
   - measure
+  - curr
+  - curr_act
+  - report_curr
+  # act_epsus
   - pdicity
-  - range_desc
+  # adj
+  # det_guidance
   - units
+  - action
+  # ptgdet
+  - estimid
+  - alysnam
+  - estcur
+
 
 date:
-  # ID File
+  # id
   - sdates
-  # Adjustment file
-  - spdates
-  # Detail file
+  # det_epsus
   - actdats
-  - anndats
-  - actdats_act
-  - anndats_act
   - fpedats
   - revdats
-  # Detail Guidance file
+  - anndats
+  - actdats_act
+  # act_epsus
+  - pends
+  # adj
+  - spdates
+  # det_guidance
   - mod_date
+  # ptgdet
+
 
 float32:
-  # Detail file
-  - acttims
-  - acttims_act
-  - actual
-  - analys
-  - anntims
-  - anntims_act
-  - estimator
-  - revtims
-  - usfirm
+  # id
+  # det_epsus
   - value
-  # Detail Guidance file
-  - mean_at_date
-  - eefymo
-  - mod_time
-  - prd_mon
-  - prd_yr
+  - actual
+  # act_epsus
+  # adj
+  - adj
+  # det_guidance
   - val_1
   - val_2
+  - mean_at_date
+  # ptgdet

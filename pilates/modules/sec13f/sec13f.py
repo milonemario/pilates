@@ -26,6 +26,10 @@ class sec13f(wrds_module):
         This function requires the following object attributes:
             self.holdings --    Data from the 'wrds_13f_holdings' file
         """
+        # Check requirements
+        self.d._check_id_column()
+        self.d._check_date_column()
+
         ##########################
         # Clean 13F Summary data #
         ##########################
@@ -37,7 +41,7 @@ class sec13f(wrds_module):
         cols = ['cik', 'fname', 'fdate', 'rdate', 'coname', 'reporttype',
                 'amendmenttype', 'confdeniedexpired', 'tableentrytotal']
         su = self.open_data(self.summary, cols).drop_duplicates()
-        su = su[su.rdate >= datetime.date(2013, 6, 30)]
+        su = su[su.rdate >= '2013-06-30']
         su['first_fdate'] = su.groupby(key).fdate.transform('min')
         # Only consider restatements within one month after the first filing
         su = su[su.fdate - su.first_fdate < np.timedelta64(31, 'D')]
@@ -133,34 +137,26 @@ class sec13f(wrds_module):
         ############################
         # Merge with the user data #
         ############################
-        data_cols = self.d.get_fields_names(data)
-        if 'permno' in data_cols:
-            dfu = self.open_data(data, ['permno', self.d.col_date])
-        elif 'gvkey' in data_cols:
-            dfu = self.open_data(data, ['gvkey', self.d.col_date])
+        dfu = self.open_data(data, [self.d.col_id, self.d.col_date])
+        if self.d.col_id == 'gvkey':
             dfu['permno'] = self.d.crsp.permno_from_gvkey(dfu)
-        else:
-            raise Exception('get_io_perc only accepts permno or gvkey ' +
-                            ' as identifiers')
-        # index = dfu.index
-        # dfu = dfu.dropna()
-        if self.d.freq in ['Q', 'M']:
-            # Merge on year and month
-            dt = pd.to_datetime(dfu[self.d.col_date]).dt
-            dfu['year'] = dt.year
-            dfu['month'] = dt.month
-            dt = pd.to_datetime(io.rdate).dt
-            io['year'] = dt.year
-            io['month'] = dt.month
-            key = ['permno', 'year', 'month']
-        elif self.d.freq in ['A']:
-            # Keep the latest quarter of the year
-            dt = pd.to_datetime(m.fdate).dt
-            m['year'] = dt.year
-            None
-        elif self.d.freq in ['D']:
-            # Merge on the day
-            None
-        dfin = dfu.merge(io[key+['io_frac']], how='left', on=key)
+        elif self.d.col_id != 'permno':
+            raise Exception("Institutional Ownership using tr_13f data can "
+                            "only be computed for data with identifiers 'gvkey' "
+                            " or 'permno'.")
+        # Merge the IO data (on permno, rdate)
+        ## Correct columns types from the groupby on 'permno'
+        io = self.d.crsp._correct_columns_types(io)
+        ## Prepare the data
+        dfu = dfu.sort_values(self.d.col_date)
+        dfu = dfu.dropna()
+        io = io.sort_values('rdate')
+        ## IO data is quarterly so merge with quarterly tolerance
+        dfin = pd.merge_asof(dfu, io,
+                             left_on=self.d.col_date,
+                             right_on='rdate',
+                             by='permno',
+                             tolerance=pd.Timedelta('90 day'),
+                             direction='nearest')
         dfin.index = dfu.index
-        return(dfin.io_frac.astype('float32'))
+        return(dfin.io_frac)

@@ -132,6 +132,8 @@ class data:
 
     def __init__(self, datadir=None, chunksize=500000):
         self.datadir = None
+        self.col_date = None
+        self.col_id = None
         if datadir is not None:
             self.set_data_directory(datadir)
         self.chunksize = chunksize
@@ -151,12 +153,34 @@ class data:
         """ Check if the data directory has been specified.
 
         Raises:
-            Exception: If the data directory has not been set
+            Exception: If the data directory has not been set.
 
         """
-        if self.datadir is None:
-            raise Exception("Please provide a data directory with",
-                            "'set_data_directory()'")
+        if not self.datadir:
+            raise Exception("Please provide a data directory "
+                            "using 'set_data_directory()'")
+
+    def _check_date_column(self):
+        """ Check if the date column of the main data has been specified.
+
+        Raises:
+            Exception: If the date column has not been set.
+
+        """
+        if not self.col_date:
+            raise Exception("Please provide a date column to use with your data "
+                            "using 'set_date_column()'")
+
+    def _check_id_column(self):
+        """ Check if the id column of the main data has been specified.
+
+        Raises:
+            Exception: If the id column has not been set.
+
+        """
+        if not self.col_id:
+            raise Exception("Please provide an ID column to use with your data "
+                            "using 'set_id_column()'")
 
     def set_chunksize(self, size):
         """ Defines the chunk size to use when converting datasets.

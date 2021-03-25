@@ -23,8 +23,32 @@ class ibes(wrds_module):
         # Default filters
         self.usfirm = 1
 
+    def set_remote_access(self, remote_access=True, wrds_username=None):
+        """ Overload this function to set default files to use/
+        """
+        wrds_module.set_remote_access(self, remote_access, wrds_username)
+        # Default files
+        self.set_files('epsus')
+
+    def set_files(self, name):
+        """ Set the files to use. WRDS has several types of file depending
+        on the region covered and the forecast.
+
+        Args:
+            name (str): Should be either 'epsus', 'xepsus', 'epsint' or 'xepsint'.
+
+        """
+        supported_files = ['epsus']
+        if name not in supported_files:
+            raise Exception("The IBES module currently only supports the "
+                            "following files: " + str(supported_files))
+        # Set the files
+        self.det = getattr(self, 'det_'+name)
+        self.act = getattr(self, 'act_'+name)
+        #self.statsum = getattr(self, 'statsum_'+name)
+
     def set_ticker_column(self, col_ticker):
-        """ Set the name of the column to use for the IBE ticker.
+        """ Set the name of the column to use for the IBES ticker.
         """
         self.col_ticker = col_ticker
 
@@ -112,7 +136,7 @@ class ibes(wrds_module):
         _ibes2 = _ibes1[_ibes1.sdates == _ibes1.ldate].drop(['sdates'], axis=1)
         # 1.2 CRSP: Get all permno-ncusip combinations
         cols = ['permno', 'ncusip', 'comnam', 'namedt', 'nameenddt']
-        _crsp1 = self.open_data(self.d.crsp.stocknames, cols)
+        _crsp1 = self.d.crsp.open_data(self.d.crsp.stocknames, cols)
         g = _crsp1.groupby(['permno', 'ncusip'])
         # First namedt and last nameenddt
         _crsp1['fnamedt'] = g.namedt.transform('min')
@@ -188,7 +212,7 @@ class ibes(wrds_module):
         _nomatch3 = _nomatch2[_nomatch2.sdates == _nomatch2.ldate]
         # Get entire list of CRSP stocks with Exchange Ticker information
         cols = ['ticker', 'comnam', 'permno', 'ncusip', 'namedt', 'nameenddt']
-        _crsp_n1 = self.open_data(self.d.crsp.stocknames, cols)
+        _crsp_n1 = self.d.crsp.open_data(self.d.crsp.stocknames, cols)
         _crsp_n1 = _crsp_n1[_crsp_n1.ticker.notna()]
         # Arrange effective dates for link by Exchange Ticker
         g = _crsp_n1.groupby(['permno', 'ticker'])
@@ -426,7 +450,7 @@ class ibes(wrds_module):
     def _get_fields_guidance(self, fields=None):
         """ Return the fields from the guidance file filtered. """
         cols = ['pdicity', 'measure', 'usfirm', 'units', 'prd_yr', 'prd_mon']
-        df = self.open_data(self.guidance, cols+fields)
+        df = self.open_data(self.det_guidance, cols+fields)
         # Keep quarterly EPS forecasts for US firms
         df = df[(df.pdicity == self.guidance_pdicity) &
                 (df.measure == self.measure) &
@@ -516,15 +540,14 @@ class ibes(wrds_module):
         df['act_time_keep'] = df.groupby(key).act_time.transform('max')
         df = df[df.act_time == df.act_time_keep]
         # Merge with user data and return the fields
-        data_cols = self.d.get_fields_names(data)
         key = ['ticker', 'prd_yr', 'prd_mon']
         # Prepare the user data for merge
-        if self.col_fpedats in data_cols:
+        if self.col_fpedats in data.columns:
             dfu = self.open_data(data, ['ticker', self.col_fpedats])
             dt = pd.to_datetime(dfu[self.col_fpedats]).dt
             dfu['prd_yr'] = dt.year
             dfu['prd_mon'] = dt.month
-        elif 'fpedats' in data_cols:
+        elif 'fpedats' in data.columns:
             dfu = self.open_data(data, ['ticker', 'fpedats'])
             dt = pd.to_datetime(dfu.fpedats).dt
             dfu['prd_yr'] = dt.year
@@ -586,12 +609,11 @@ class ibes(wrds_module):
             ea[fields] = eas
         # Merge the EA dates to the user data
         # Determine which key to use
-        data_cols = self.d.get_fields_names(data)
         key = ['ticker', 'fpedats']
-        if self.col_fpedats in data_cols:
+        if self.col_fpedats in data.columns:
             dfu = self.open_data(data, ['ticker', self.col_fpedats])
             dfu['fpedats'] = dfu[self.col_fpedats]
-        elif 'fpedats' in data_cols:
+        elif 'fpedats' in data.columns:
             dfu = self.open_data(data, key)
         else:  # For use when using guidance data
             key = ['ticker', 'prd_yr', 'prd_mon']
@@ -641,12 +663,11 @@ class ibes(wrds_module):
             ea.anndats_act = ea.eas
         # Merge the EA dates to the user data
         # Determine which key to use
-        data_cols = self.d.get_fields_names(data)
         key = ['ticker', 'fpedats']
-        if self.col_fpedats in data_cols:
+        if self.col_fpedats in data.columns:
             dfu = self.open_data(data, ['ticker', self.col_fpedats])
             dfu['fpedats'] = dfu[self.col_fpedats]
-        elif 'fpedats' in data_cols:
+        elif 'fpedats' in data.columns:
             dfu = self.open_data(data, key)
         else:  # For use when using guidance data
             key = ['ticker', 'prd_yr', 'prd_mon']
@@ -804,18 +825,18 @@ class ibes(wrds_module):
         measures = ['PTG']
         if measure not in measures:
             raise Exception('Supported measures:', measures)
-        det = self.open_data(self.ptg, ['measure'])
+        det = self.open_data(self.ptgdet, ['measure'])
         kmeasure = det.measure == measure
         # Filter usfirm
-        det = self.open_data(self.ptg, ['usfirm'])
+        det = self.open_data(self.ptgdet, ['usfirm'])
         kusfirm = det.usfirm == self.usfirm
         # Filter horizon
-        det = self.open_data(self.ptg, ['horizon'])
+        det = self.open_data(self.ptgdet, ['horizon'])
         khorizon = det.horizon == horizon
         # Create the final filter
         mask = kmeasure & kusfirm & khorizon
         cols = ['ticker', 'value', 'anndats', 'anntims', 'amaskcd']
-        det = self.open_data(self.ptg, cols)
+        det = self.open_data(self.ptgdet, cols)
         det = det[mask].drop_duplicates()
         # Create a full timestamp for the forecasts
         det.anntims = pd.to_timedelta(det.anntims, unit='s')

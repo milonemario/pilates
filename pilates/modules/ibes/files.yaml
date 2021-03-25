@@ -9,23 +9,26 @@ id:
   index:
     - ticker
 
-det:
+# EPSUS
+det_epsus:
   schema: tr_ibes
   table: det_epsus
   index:
     - ticker
 
-act:
+act_epsus:
   schema: tr_ibes
   table: act_epsus
   index:
     - ticker
 
-sum:
-  schema: tr_ibes
-  table: statsum_epsus
-  index:
-    - ticker
+#statsum_epsus:
+#  schema: tr_ibes
+#  table: statsum_epsus
+#  index:
+#    - ticker
+
+# Others
 
 adj:
   schema: tr_ibes
@@ -33,13 +36,13 @@ adj:
   index:
     - ticker
 
-guidance:
+det_guidance:
   schema: tr_ibes_guidance
   table: det_guidance
   index:
     - ticker
 
-ptg:
+ptgdet:
   schema: tr_ibes
   table: ptgdet
   index:

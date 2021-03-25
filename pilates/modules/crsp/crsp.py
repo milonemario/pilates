@@ -78,7 +78,12 @@ class crsp(wrds_module):
 
     def permno_from_cusip(self, data):
         """ Returns CRSP permno from CUSIP.
-        Arguments:
+
+        Note: this function does not ensure a 1-to-1 mapping and there might
+        be more than one cusip for a given permno (several cusips may have the
+        same permno).
+
+        Args:
             data -- User provided data.
                     Required columns: ['cusip']
                     The cusip needs to be the CRSP ncusip.
