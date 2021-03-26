@@ -144,14 +144,14 @@ class crsp(wrds_module):
         """
         # Get the fields
         # Note: CRSP data is clean without duplicates
-        if file is None:
+        if not file:
             file = self.sf
         key = [self.col_id, self.col_date]
         if file == self.dsi:
             key = [self.col_date]
         df = self.open_data(file, key+fields)
         # Construct the object to return
-        if data is not None:
+        if data:
             # Merge and return the fields
             data_key = self.open_data(data, key)
             index = data_key.index
@@ -358,20 +358,23 @@ class crsp(wrds_module):
         return(self._value_for_data(bas, data, nperiods, useall))
 
     def turnover(self, data, nperiods=1, useall=True):
-        r"""
-        Return the daily turnover over 'ndays' days.
-        Arguments:
-            data -- User data.
-                    Required columns: [permno, 'col_date']
-            col_date -- Column of the dates at which to compute the turnover.
-            ndays --    Number of days to use to compute the turnover.
-                        If positive, compute the turnover over
-                        'ndays' in the future. If negative, compute the
-                        turnover over abs(ndays) in the past.
-            useall --  If True, use the turnover of the last
-                        available trading date (if ndays<0) or the
-                        turnover of the next available trading day
-                        (if ndays>0).
+        r""" Return the daily turnover over 'nperiods' (usually days).
+
+        Args:
+            data (DataFrame):   User data.
+                                Required columns: [permno, 'col_date']
+
+            nperiods (int):     Number of periods (usually days)
+                                to use to compute the turnover.
+                                If positive, compute the turnover over
+                                'nperiods' in the future. If negative, compute the
+                                turnover over abs(nperiods) in the past.
+
+            useall (bool):      If True, use the turnover of the last
+                                available trading date (if nperiods<0) or the
+                                turnover of the next available trading day
+                                (if nperiods>0).
+
         """
         # Open the necessary data
         key = self.key
@@ -379,6 +382,8 @@ class crsp(wrds_module):
         # Note: The number of shares outstanding (shrout) is in thousands.
         # Note: The volume in the daily data is expressed in units of shares.
         dsf = self._get_fields(fields)
+        # Some type conversion to make sure the rolling window will work.
+        dsf['shrout'] = dsf.shrout.astype('float32')
         # Create the time series index
         dsf = dsf.set_index('date')
         # Compute the average turnover

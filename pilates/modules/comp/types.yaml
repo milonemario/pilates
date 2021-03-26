@@ -4,69 +4,70 @@
 
 # Pandas Nullable Int32 type
 Int32:
-  # General
+  # names
   - gvkey
-  - fyear
-  # Annual data
   - sic
-
-# Pandas Nullable string type
-string:
-  # Annual Data
-  - acctchg
-  - acctstd
-  - acqmeth
-  - add1
-  - add2
-  - add3
-  - add4
-  - addzip
+  - year1
+  - year2
+  # funda
+  - fyear
+  - fyr
+  - ismod
+  - pddur
+  - scf
+  - src
+  - upd
+  - iid
+  - sich
   - au
   - auop
   - auopic
+  # fundq
+  - fyearq
+  - fqtr
+  - scfq
+  - srcq
+  - updq
+  - exchg
+
+
+string:
+  # names
+  - conm
+  - tic
+  - cusip
+  - cik
+  - naics
+  - gsubind
+  - gind
+  # funda
+  - indfmt
+  - consol
+  - popsrc
+  - datafmt
+  - acctchg
+  - acctstd
+  - acqmeth
   - bspr
-  - busdesc
+  - compst
+  - curcd
+  - curncd
+  - final
+  - ltcm
+  - ogm
+  - stalt
+  - udpl
+  - costat
+  - fic
   - ceoso
   - cfoso
-  - cik
-  - city
-  - compst
-  - conm
-  - conml
-  - county
-  - curncd
-  - cusip
-  - dlrsn
-  - ein
-  - fax
-  - fic
-  - final
-  - ggroup
-  - gind
-  - gsector
-  - gsubind
-  - idbflag
-  - incorp
-  - loc
-  - ltcm
-  - naics
   - naicsh
-  - ogm
-  - phone
-  - prican
-  - prirow
-  - priusa
-  - spcsrc
-  - stalt
-  - state
-  - tic
-  - udpl
-  - weburl
-  # Quarterly Data
-  - acctchgq
+  # fundq
+  - acctchg
+  - acctstd
   - bsprq
-  - cik
   - compstq
+  - curcdq
   - curncdq
   - datacqtr
   - datafqtr
@@ -75,25 +76,37 @@ string:
   - rp
   - staltq
 
+
 date:
-  # General
+  # names
+  # funda
   - datadate
-  # Annual Data
   - apdedate
-  - dldte
   - fdate
-  - ipodate
   - pdate
-  # Quarterly Data
+  # fundq
   - apdedateq
   - fdateq
   - pdateq
   - rdq
 
+
 float32:
-  # Annual Data
+  # names
+  # funda
+  - adrr
+  - ajex
+  - ajp
+  - currtr
+  - curuscn
+  - ismod
+  - pddur
+  - scf
+  - src
+  - upd
   - acchg
   - acco
+  - accrt
   - acdo
   - aco
   - acodo
@@ -111,15 +124,10 @@ float32:
   - acqppe
   - acqsc
   - act
-  - adjex_c
-  - adjex_f
   - adpac
-  - adrr
   - aedi
   - afudcc
   - afudci
-  - ajex
-  - ajp
   - aldo
   - am
   - amc
@@ -170,6 +178,7 @@ float32:
   - bct
   - bctbl
   - bctr
+  - billexce
   - bkvlps
   - bltbl
   - ca
@@ -177,12 +186,14 @@ float32:
   - capr2
   - capr3
   - caps
+  - capsft
   - capx
   - capxv
   - cb
   - cbi
   - cdpac
   - cdvc
+  - ceiexbill
   - ceq
   - ceql
   - ceqt
@@ -240,13 +251,9 @@ float32:
   - cshrso
   - cshrt
   - cshrw
-  - cshtr_c
-  - cshtr_f
   - cstk
   - cstkcv
   - cstke
-  - currtr
-  - curuscn
   - dbi
   - dc
   - dclo
@@ -263,6 +270,11 @@ float32:
   - dd4
   - dd5
   - depc
+  - derac
+  - deralt
+  - derhedgl
+  - derlc
+  - derllt
   - dfpac
   - dfs
   - dfxa
@@ -306,6 +318,7 @@ float32:
   - drci
   - drlt
   - ds
+  - dt
   - dtea
   - dted
   - dteeps
@@ -314,15 +327,12 @@ float32:
   - dv
   - dvc
   - dvdnp
+  - dvintf
   - dvp
   - dvpa
   - dvpd
   - dvpdp
   - dvpibb
-  - dvpsp_c
-  - dvpsp_f
-  - dvpsx_c
-  - dvpsx_f
   - dvrpiv
   - dvrre
   - dvsco
@@ -349,7 +359,6 @@ float32:
   - esub
   - esubc
   - excadj
-  - exchg
   - exre
   - fatb
   - fatc
@@ -366,7 +375,21 @@ float32:
   - ffo
   - ffs
   - fiao
+  - finaco
+  - finao
   - fincf
+  - finch
+  - findlc
+  - findlt
+  - finivst
+  - finlco
+  - finlto
+  - finnp
+  - finrecc
+  - finreclt
+  - finrev
+  - finxint
+  - finxopr
   - fopo
   - fopox
   - fopt
@@ -374,9 +397,6 @@ float32:
   - fsrct
   - fuseo
   - fuset
-  # - fyear
-  - fyr
-  - fyrc
   - gbbl
   - gdwl
   - gdwlam
@@ -392,6 +412,7 @@ float32:
   - glcep
   - gld
   - gleps
+  - gliv
   - glp
   - govgr
   - govtown
@@ -486,7 +507,6 @@ float32:
   - islgc
   - islgm
   - islt
-  - ismod
   - isng
   - isngc
   - isngm
@@ -532,6 +552,7 @@ float32:
   - li
   - lif
   - lifr
+  - lifrp
   - lloml
   - lloo
   - llot
@@ -554,7 +575,6 @@ float32:
   - mibn
   - mibt
   - mii
-  - mkvalt
   - mrc1
   - mrc2
   - mrc3
@@ -627,7 +647,6 @@ float32:
   - pclr
   - pcnlr
   - pctr
-  - pddur
   - pdvc
   - pi
   - pidom
@@ -671,12 +690,6 @@ float32:
   - prca
   - prcad
   - prcaeps
-  - prcc_c
-  - prcc_f
-  - prch_c
-  - prch_f
-  - prcl_c
-  - prcl_f
   - prebl
   - pri
   - prodv
@@ -701,7 +714,6 @@ float32:
   - pwoi
   - radp
   - ragr
-  - rank
   - rari
   - rati
   - rca
@@ -740,6 +752,8 @@ float32:
   - rrd
   - rreps
   - rrp
+  - rstche
+  - rstchelt
   - rvbci
   - rvbpi
   - rvbti
@@ -762,7 +776,6 @@ float32:
   - salepfp
   - sbdc
   - sc
-  - scf
   - sco
   - scstkc
   - secu
@@ -772,13 +785,10 @@ float32:
   - setd
   - seteps
   - setp
-  - sich
   - siv
   - spce
   - spced
   - spceeps
-  - spcindcd
-  - spcseccd
   - spi
   - spid
   - spieps
@@ -787,7 +797,6 @@ float32:
   - sppe
   - sppiv
   - spstkc
-  - src
   - sret
   - srt
   - ssnp
@@ -796,7 +805,6 @@ float32:
   - stio
   - stkco
   - stkcpa
-  - stko
   - tdc
   - tdscd
   - tdsce
@@ -898,7 +906,6 @@ float32:
   - uois
   - uopi
   - uopres
-  - upd
   - updvp
   - upmcstk
   - upmpf
@@ -967,6 +974,7 @@ float32:
   - xpp
   - xpr
   - xrd
+  - xrdp
   - xrent
   - xs
   - xsga
@@ -980,20 +988,12 @@ float32:
   - xuwoi
   - xuwrei
   - xuwti
-  # Quarterly Data
+  # fundq
   - acchgq
-  - acchgy
   - acomincq
   - acoq
   - actq
-  - adjex
-  - adrrq
-  - afudccy
-  - afudciy
-  - ajexq
-  - ajpq
   - altoq
-  - amcy
   - ancq
   - anoq
   - aociderglq
@@ -1001,207 +1001,140 @@ float32:
   - aocipenq
   - aocisecglq
   - aol2q
-  - aolochy
   - aoq
-  - apalchy
   - apq
   - aqaq
-  - aqay
-  - aqcy
   - aqdq
-  - aqdy
   - aqepsq
-  - aqepsy
   - aqpl1q
   - aqpq
-  - aqpy
   - arcedq
-  - arcedy
   - arceepsq
-  - arceepsy
   - arceq
-  - arcey
   - atq
   - aul3q
+  - billexceq
   - capr1q
   - capr2q
   - capr3q
+  - capsftq
   - capsq
-  - capxy
-  - cdvcy
+  - ceiexbillq
   - ceqq
-  - chechy
   - cheq
   - chq
   - cibegniq
-  - cibegniy
   - cicurrq
-  - cicurry
   - ciderglq
-  - cidergly
   - cimiiq
-  - cimiiy
   - ciotherq
-  - ciothery
   - cipenq
-  - cipeny
   - ciq
   - cisecglq
-  - cisecgly
   - citotalq
-  - citotaly
-  - ciy
   - cogsq
-  - cogsy
   - csh12q
+  - cshfd12
   - cshfdq
-  - cshfdy
   - cshiq
   - cshopq
   - cshoq
   - cshprq
-  - cshpry
-  - cshtrq
   - cstkcvq
   - cstkeq
-  - cstkey
   - cstkq
-  - currtrq
-  - curuscnq
   - dcomq
   - dd1q
-  - depcy
+  - deracq
+  - deraltq
+  - derhedglq
+  - derlcq
+  - derlltq
   - diladq
-  - dilady
   - dilavq
-  - dilavy
-  - dlcchy
   - dlcq
-  - dltisy
-  - dltry
   - dlttq
   - doq
-  - doy
   - dpacreq
   - dpactq
-  - dpcy
   - dpq
   - dpretq
-  - dprety
-  - dpy
   - drcq
   - drltq
   - dteaq
-  - dteay
   - dtedq
-  - dtedy
   - dteepsq
-  - dteepsy
   - dtepq
-  - dtepy
+  - dvintfq
   - dvpq
-  - dvpspq
-  - dvpsxq
-  - dvpy
-  - dvy
   - epsf12
+  - epsfi12
   - epsfiq
-  - epsfiy
   - epsfxq
-  - epsfxy
+  - epspi12
   - epspiq
-  - epspiy
   - epspxq
-  - epspxy
   - epsx12
   - esopctq
   - esopnrq
   - esoprq
   - esoptq
-  - esubcy
   - esubq
-  - esuby
-  - exchg
-  - exrey
   - fcaq
-  - fcay
   - ffoq
-  - ffoy
-  - fiaoy
-  - fincfy
-  - fopoxy
-  - fopoy
-  - fopty
-  - fsrcoy
-  - fsrcty
-  - fuseoy
-  - fusety
-  - fyr
-  - fyrc
+  - finacoq
+  - finaoq
+  - finchq
+  - findlcq
+  - findltq
+  - finivstq
+  - finlcoq
+  - finltoq
+  - finnpq
+  - finreccq
+  - finrecltq
+  - finrevq
+  - finxintq
+  - finxoprq
   - gdwlamq
-  - gdwlamy
   - gdwlia12
   - gdwliaq
-  - gdwliay
   - gdwlid12
   - gdwlidq
-  - gdwlidy
   - gdwlieps12
   - gdwliepsq
-  - gdwliepsy
   - gdwlipq
-  - gdwlipy
   - gdwlq
   - glaq
-  - glay
   - glcea12
   - glceaq
-  - glceay
   - glced12
   - glcedq
-  - glcedy
   - glceeps12
   - glceepsq
-  - glceepsy
   - glcepq
-  - glcepy
   - gldq
-  - gldy
   - glepsq
-  - glepsy
+  - glivq
   - glpq
-  - glpy
   - hedgeglq
-  - hedgegly
   - ibadj12
   - ibadjq
-  - ibadjy
   - ibcomq
-  - ibcomy
-  - ibcy
   - ibmiiq
-  - ibmiiy
   - ibq
-  - iby
   - icaptq
   - intaccq
   - intanoq
   - intanq
-  - intpny
-  - invchy
   - invfgq
   - invoq
   - invrmq
   - invtq
   - invwipq
-  - itccy
-  - ivacoy
   - ivaeqq
   - ivaoq
-  - ivchy
   - ivltq
-  - ivncfy
-  - ivstchy
   - ivstq
   - lcoq
   - lctq
@@ -1219,151 +1152,85 @@ float32:
   - mibq
   - mibtq
   - miiq
-  - miiy
-  - mkvaltq
   - msaq
   - ncoq
-  - ncoy
   - niitq
-  - niity
   - nimq
-  - nimy
   - niq
-  - niy
   - nopiq
-  - nopiy
   - npatq
   - npq
   - nrtxtdq
-  - nrtxtdy
   - nrtxtepsq
-  - nrtxtepsy
   - nrtxtq
-  - nrtxty
-  - oancfy
   - obkq
   - oepf12
   - oeps12
   - oepsxq
-  - oepsxy
   - oiadpq
-  - oiadpy
   - oibdpq
-  - oibdpy
   - opepsq
-  - opepsy
   - optdrq
-  - optdry
   - optfvgrq
-  - optfvgry
   - optlifeq
-  - optlifey
   - optrfrq
-  - optrfry
   - optvolq
-  - optvoly
-  - pdvcy
   - piq
-  - piy
   - pllq
-  - plly
   - pnc12
   - pncd12
   - pncdq
-  - pncdy
   - pnceps12
   - pncepsq
-  - pncepsy
   - pnciapq
-  - pnciapy
   - pnciaq
-  - pnciay
   - pncidpq
-  - pncidpy
   - pncidq
-  - pncidy
   - pnciepspq
-  - pnciepspy
   - pnciepsq
-  - pnciepsy
   - pncippq
-  - pncippy
   - pncipq
-  - pncipy
   - pncpd12
   - pncpdq
-  - pncpdy
   - pncpeps12
   - pncpepsq
-  - pncpepsy
   - pncpq
-  - pncpy
   - pncq
   - pncwiapq
-  - pncwiapy
   - pncwiaq
-  - pncwiay
   - pncwidpq
-  - pncwidpy
   - pncwidq
-  - pncwidy
   - pncwiepq
   - pncwiepsq
-  - pncwiepsy
-  - pncwiepy
   - pncwippq
-  - pncwippy
   - pncwipq
-  - pncwipy
-  - pncy
   - pnrshoq
   - ppegtq
   - ppentq
   - prcaq
-  - prcay
-  - prccq
   - prcd12
   - prcdq
-  - prcdy
   - prce12
   - prceps12
   - prcepsq
-  - prcepsy
-  - prchq
-  - prclq
   - prcpd12
   - prcpdq
-  - prcpdy
   - prcpeps12
   - prcpepsq
-  - prcpepsy
   - prcpq
-  - prcpy
   - prcraq
   - prshoq
-  - prstkccy
-  - prstkcy
-  - prstkpcy
   - pstknq
   - pstkq
   - pstkrq
   - rcaq
-  - rcay
   - rcdq
-  - rcdy
   - rcepsq
-  - rcepsy
   - rcpq
-  - rcpy
   - rdipaq
-  - rdipay
   - rdipdq
-  - rdipdy
   - rdipepsq
-  - rdipepsy
   - rdipq
-  - rdipy
-  - recchy
   - recdq
   - rectaq
   - rectoq
@@ -1374,196 +1241,357 @@ float32:
   - retq
   - reunaq
   - revtq
-  - revty
   - rllq
   - rra12
   - rraq
-  - rray
   - rrd12
   - rrdq
-  - rrdy
   - rreps12
   - rrepsq
-  - rrepsy
   - rrpq
-  - rrpy
+  - rstcheltq
+  - rstcheq
   - saleq
-  - saley
-  - scfq
-  - scstkcy
   - seqoq
   - seqq
   - seta12
   - setaq
-  - setay
   - setd12
   - setdq
-  - setdy
   - seteps12
   - setepsq
-  - setepsy
   - setpq
-  - setpy
-  - sivy
   - spce12
   - spced12
   - spcedpq
-  - spcedpy
   - spcedq
-  - spcedy
   - spceeps12
   - spceepsp12
   - spceepspq
-  - spceepspy
   - spceepsq
-  - spceepsy
   - spcep12
   - spcepd12
   - spcepq
-  - spcepy
   - spceq
-  - spcey
-  - spcindcd
-  - spcseccd
   - spidq
-  - spidy
   - spiepsq
-  - spiepsy
   - spioaq
-  - spioay
   - spiopq
-  - spiopy
   - spiq
-  - spiy
-  - sppey
-  - sppivy
-  - spstkcy
-  - srcq
   - sretq
-  - srety
-  - sstky
   - stkcoq
-  - stkcoy
   - stkcpaq
-  - stkcpay
-  - stko
-  - tdcy
   - teqq
   - tfvaq
   - tfvceq
-  - tfvcey
   - tfvlq
   - tieq
-  - tiey
   - tiiq
-  - tiiy
-  - tsafcy
   - tstknq
   - tstkq
-  - txachy
-  - txbcofy
-  - txbcoy
   - txdbaq
   - txdbcaq
   - txdbclq
   - txdbq
-  - txdcy
   - txdiq
   - txditcq
-  - txdiy
-  - txpdy
   - txpq
   - txtq
-  - txty
   - txwq
-  - txwy
   - uacoq
-  - uaolochy
   - uaoq
   - uaptq
   - ucapsq
   - ucconsq
   - uceqq
   - uddq
-  - udfccy
   - udmbq
   - udoltq
   - udpcoq
   - udvpq
-  - udvpy
-  - ufretsdy
   - ugiq
-  - ugiy
   - uinvq
   - ulcoq
   - uniamiq
-  - uniamiy
   - unopincq
-  - unopincy
-  - unwccy
-  - uoisy
   - uopiq
-  - updq
   - updvpq
-  - updvpy
   - upmcstkq
   - upmpfq
   - upmpfsq
   - upmsubpq
   - upstkcq
   - upstkq
-  - uptacy
   - urectq
   - uspiq
-  - uspiy
-  - ustdncy
   - usubdvpq
-  - usubdvpy
   - usubpcvq
   - utemq
+  - wcapq
+  - wdaq
+  - wddq
+  - wdepsq
+  - wdpq
+  - xaccq
+  - xidoq
+  - xintq
+  - xiq
+  - xoprq
+  - xopt12
+  - xoptd12
+  - xoptd12p
+  - xoptdq
+  - xoptdqp
+  - xopteps12
+  - xoptepsp12
+  - xoptepsq
+  - xoptepsqp
+  - xoptq
+  - xoptqp
+  - xrdq
+  - xsgaq
+  - acchgy
+  - afudccy
+  - afudciy
+  - amcy
+  - aolochy
+  - apalchy
+  - aqay
+  - aqcy
+  - aqdy
+  - aqepsy
+  - aqpy
+  - arcedy
+  - arceepsy
+  - arcey
+  - capxy
+  - cdvcy
+  - chechy
+  - cibegniy
+  - cicurry
+  - cidergly
+  - cimiiy
+  - ciothery
+  - cipeny
+  - cisecgly
+  - citotaly
+  - ciy
+  - cogsy
+  - cshfdy
+  - cshpry
+  - cstkey
+  - depcy
+  - derhedgly
+  - dilady
+  - dilavy
+  - dlcchy
+  - dltisy
+  - dltry
+  - doy
+  - dpcy
+  - dprety
+  - dpy
+  - dteay
+  - dtedy
+  - dteepsy
+  - dtepy
+  - dvpy
+  - dvy
+  - epsfiy
+  - epsfxy
+  - epspiy
+  - epspxy
+  - esubcy
+  - esuby
+  - exrey
+  - fcay
+  - ffoy
+  - fiaoy
+  - fincfy
+  - finrevy
+  - finxinty
+  - finxopry
+  - fopoxy
+  - fopoy
+  - fopty
+  - fsrcoy
+  - fsrcty
+  - fuseoy
+  - fusety
+  - gdwlamy
+  - gdwliay
+  - gdwlidy
+  - gdwliepsy
+  - gdwlipy
+  - glay
+  - glceay
+  - glcedy
+  - glceepsy
+  - glcepy
+  - gldy
+  - glepsy
+  - glivy
+  - glpy
+  - hedgegly
+  - ibadjy
+  - ibcomy
+  - ibcy
+  - ibmiiy
+  - iby
+  - intpny
+  - invchy
+  - itccy
+  - ivacoy
+  - ivchy
+  - ivncfy
+  - ivstchy
+  - miiy
+  - ncoy
+  - niity
+  - nimy
+  - niy
+  - nopiy
+  - nrtxtdy
+  - nrtxtepsy
+  - nrtxty
+  - oancfy
+  - oepsxy
+  - oiadpy
+  - oibdpy
+  - opepsy
+  - optdry
+  - optfvgry
+  - optlifey
+  - optrfry
+  - optvoly
+  - pdvcy
+  - piy
+  - plly
+  - pncdy
+  - pncepsy
+  - pnciapy
+  - pnciay
+  - pncidpy
+  - pncidy
+  - pnciepspy
+  - pnciepsy
+  - pncippy
+  - pncipy
+  - pncpdy
+  - pncpepsy
+  - pncpy
+  - pncwiapy
+  - pncwiay
+  - pncwidpy
+  - pncwidy
+  - pncwiepsy
+  - pncwiepy
+  - pncwippy
+  - pncwipy
+  - pncy
+  - prcay
+  - prcdy
+  - prcepsy
+  - prcpdy
+  - prcpepsy
+  - prcpy
+  - prstkccy
+  - prstkcy
+  - prstkpcy
+  - rcay
+  - rcdy
+  - rcepsy
+  - rcpy
+  - rdipay
+  - rdipdy
+  - rdipepsy
+  - rdipy
+  - recchy
+  - revty
+  - rray
+  - rrdy
+  - rrepsy
+  - rrpy
+  - saley
+  - scstkcy
+  - setay
+  - setdy
+  - setepsy
+  - setpy
+  - sivy
+  - spcedpy
+  - spcedy
+  - spceepspy
+  - spceepsy
+  - spcepy
+  - spcey
+  - spidy
+  - spiepsy
+  - spioay
+  - spiopy
+  - spiy
+  - sppey
+  - sppivy
+  - spstkcy
+  - srety
+  - sstky
+  - stkcoy
+  - stkcpay
+  - tdcy
+  - tfvcey
+  - tiey
+  - tiiy
+  - tsafcy
+  - txachy
+  - txbcofy
+  - txbcoy
+  - txdcy
+  - txdiy
+  - txpdy
+  - txty
+  - txwy
+  - uaolochy
+  - udfccy
+  - udvpy
+  - ufretsdy
+  - ugiy
+  - uniamiy
+  - unopincy
+  - unwccy
+  - uoisy
+  - updvpy
+  - uptacy
+  - uspiy
+  - ustdncy
+  - usubdvpy
   - utfdocy
   - utfoscy
   - utmey
   - uwkcapcy
   - wcapchy
   - wcapcy
-  - wcapq
-  - wdaq
   - wday
-  - wddq
   - wddy
-  - wdepsq
   - wdepsy
-  - wdpq
   - wdpy
-  - xaccq
   - xidocy
-  - xidoq
   - xidoy
-  - xintq
   - xinty
-  - xiq
   - xiy
-  - xoprq
   - xopry
-  - xopt12
-  - xoptd12
-  - xoptd12p
-  - xoptdq
-  - xoptdqp
   - xoptdqpy
   - xoptdy
-  - xopteps12
-  - xoptepsp12
-  - xoptepsq
-  - xoptepsqp
   - xoptepsqpy
   - xoptepsy
-  - xoptq
-  - xoptqp
   - xoptqpy
   - xopty
-  - xrdq
   - xrdy
-  - xsgaq
   - xsgay
+  - cshtrq
+  - dvpspq
+  - dvpsxq
+  - mkvaltq
+  - prccq
+  - prchq
+  - prclq
+  - adjex

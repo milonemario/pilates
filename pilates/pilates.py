@@ -585,9 +585,9 @@ class data_module:
                 apply_changes(ch)
         return(df)
 
-    #################
-    # Use functions #
-    #################
+    ##################
+    # User functions #
+    ##################
 
     def set_remote_access(self, remote_access=True):
         self.remote_access = remote_access
@@ -599,6 +599,7 @@ class data_module:
         if not os.path.exists(download_path):
             # Download the file (could be package)
             # It might be that it redownloads the package again.
+            url = self.files[name]['url']
             print('Download file '+name+' for module '+self.__class__.__name__+' ...')
             wget.download(url, self.d.datadownload)
             print('\n')

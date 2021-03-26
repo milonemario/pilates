@@ -13,22 +13,24 @@ class tr13f(wrds_module):
 
     def get_io_perc(self, data):
         """ Returns the fraction of Institutional Ownership from the S34 data.
+
         This function is based on the following WRDS SAS code:
             Summary :   Calculate Institutional Ownership, Concentration,
                         and Breadth Ratios
             Date    :   May 18, 2009
             Author  :   Luis Palacios, Rabih Moussawi, and Denys Glushkov
-        Arguments:
-            data -- User provided data
-                    Required columns:   [permno, 'col_date']
-                                        or [gvkey, 'col_date']
-        This function requires the following object attributes:
-            self.type1 --   Data from the TR s34 's34type1' file
-                            (Manager)
-            self.type3 --   Data from the TR s34 's34type3' file
-                            (Stock Holdings)
-            self.crsp.msf --  CRSP 'msf' file (monthly stock file)
-            self.crsp.msenames -- CRSP 'msenames' file
+
+        Args:
+            data (DataFrame):       User provided data
+                                    Required columns:   ['col_id', 'col_date']
+                                    where 'col_id' is gvkey or permno.
+
+        Required files:
+            tr_13f 'type1':    Data from the TR s34 's34type1' file (Manager)
+            tr_13f 'type3':    Data from the TR s34 's34type3' file (Stock Holdings)
+            crsp 'msf':        CRSP 'msf' file (monthly stock file)
+            crsp 'msenames':   CRSP 'msenames' file
+
         """
         # Check requirements
         self.d._check_id_column()

@@ -420,7 +420,7 @@ class comp(wrds_module):
         # Create the litigation dummy
         df['litig'] = 0
         df.loc[df.sic.isin(rs), 'litig'] = 1
-        return(df.litig)
+        return(df.litig.astype('Int32'))
 
     def _mb0q(self, data):
         """ Return Market-to-Book ratio 0 (Quarterly). """
@@ -464,7 +464,7 @@ class comp(wrds_module):
         dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+['numfq']], how='left', on=key)
         dfin.index = dfu.index
-        return(df.numfq)
+        return(df.numfq.astype('Int32'))
 
     def _oaccq(self, data):
         """ Return Operating Accruals (Quarterly). """

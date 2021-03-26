@@ -1,6 +1,16 @@
 ########################
-# Column types for JLN #
+# Column types for BHL #
 ########################
 
 date:
+  # full
   - date
+  # 2010
+
+float32:
+  # full
+  - uc_full sample
+  - ra_full sample
+  # 2010
+  - uc_till 2010 sample
+  - ra_till 2010 sample

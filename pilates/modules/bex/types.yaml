@@ -1,6 +1,17 @@
 ########################
-# Column types for JLN #
+# Column types for BEX #
 ########################
 
-date:
-  - date
+Int32:
+  # monthly
+  - yyyymm
+  # daily
+  - yyyymmdd
+
+
+float32:
+  # monthly
+  - ra_bex_paper
+  - unc_bex_paper
+  - unc_bex_annualvolpercentage
+  # daily

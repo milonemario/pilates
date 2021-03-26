@@ -2,9 +2,16 @@
 # Column types for JLN #
 ########################
 
-Int32:
-  - year
-  - month
-  
 date:
+  # financial
   - date
+  # macro
+  # real
+
+float32:
+  # financial
+  - h=1
+  - h=3
+  - h=12
+  # macro
+  # real

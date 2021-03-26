@@ -24,15 +24,37 @@ class ibes(wrds_module):
         self.usfirm = 1
 
     def set_remote_access(self, remote_access=True, wrds_username=None):
-        """ Overload this function to set default files to use/
+        """ Overload this function to set default files to use.
         """
         wrds_module.set_remote_access(self, remote_access, wrds_username)
         # Default files
         self.set_files('epsus')
 
+    ############################
+    # Files checking functions #
+    ############################
+
+    def _check_file(self, name):
+        """ Check if a file is available.
+
+        Args:
+            name (str):     Name of the file.
+
+        """
+        if not hasattr(self, name):
+            raise Exception("The file {name} is unavailable. ".format(name) +
+                            "You can either set the module to fetch the file "
+                            "remotely by using set_remote_access() or you can "
+                            "add the file manually with "
+                            "add_file('{name}', path) ".format(name))
+
+    #####################
+    # Setting functions #
+    #####################
+
     def set_files(self, name):
         """ Set the files to use. WRDS has several types of file depending
-        on the region covered and the forecast.
+        on the region covered and the forecast type.
 
         Args:
             name (str): Should be either 'epsus', 'xepsus', 'epsint' or 'xepsint'.
@@ -112,6 +134,10 @@ class ibes(wrds_module):
         else:
             raise Exception('The Forecast Periodicity  should be ' +
                             'either QTR, ANN, SAN, or LT.')
+
+    #####################
+    # Helpers functions #
+    #####################
 
     def _ibes_crsp_linktable(self):
         """ This function returns the ICLINK table that links IBES and CRSP.
@@ -265,6 +291,7 @@ class ibes(wrds_module):
         """ Create an adjustment factor table with a start and end date
         for each factor.
         """
+        self._check_file('adj')
         # Add the necessary columns to process the data
         cols = ['ticker', 'spdates', 'adj']
         # Open adjustment factors data
@@ -287,51 +314,158 @@ class ibes(wrds_module):
         return(df)
 
     def _get_adjustment_factors(self, data):
-        """ Get the adjustment factors for a given DataFrame.
-        Arguments:
-            df --   User provided dataset.
-                    Required columns: [ticker, fpedats]
-        This function requires the following object attributes:
-            self.adj -- Data from the IBES 'det_adj' file (adjustments file)
+        """ Get the adjustment factors.
+
+        Args:
+            data (DataFrame):   Data for which to provide the factors.
+                                Required columns: [ticker, fpedats]
+
+        Required files:
+            'adj':      Data from the IBES 'det_adj' file (adjustments file)
+
         """
+
         key = ['ticker', 'fpedats']
-        dfu = self.open_data(data, key).drop_duplicates()
+        dfu = self.open_data(data, key)
         adjfac = self._adjustmentfactors_table()
         # Add all the fpedats to all the tickers in the adjustment file
         # Ideally we would like to do a conditional merge
-        m = adjfac.merge(dfu, how='left', on='ticker')
+        m = adjfac.merge(dfu.drop_duplicates(), how='left', on='ticker')
         # Remove the dates that are not correct and the unecessary columns
         m = m[m.fpedats >= m.startdt]
         m = m[m.fpedats < m.enddt]
         m = m.drop(['startdt', 'enddt'], axis=1)
         # Merge the adjustment factors to the user data
-        dfu = self.open_data(data, key)
-        index = dfu.index
         dfin = dfu.merge(m, how='left', on=key)
         # Replace null by 1 (adjustment factors)
         dfin.loc[dfin.adj.isna(), 'adj'] = 1
-        # Make sure index is correct and return
-        dfin.index = index
+        # Return the factors
+        dfin.index = dfu.index
         return(dfin.adj)
 
     def _unadjust(self, fields, data):
-        """ Unajust the fields from the data.
+        """ Unadjust the fields from the data.
         Only used internally.
         """
         # Get the adjustment factors
         data['adj'] = self._get_adjustment_factors(data)
         # Adjust the analyst forecasts
         data[fields] = data[fields].multiply(data.adj, axis='index')
-        return(data[fields].astype('float32'))
+        return(data[fields])
+
+    def _get_fields_det(self, fields=None):
+        """ Return the fields from the det file filtered. """
+        key = ['ticker', 'fpedats']
+        # Filter measure
+        det = self.open_data(self.det, ['measure'])
+        kmeasure = det.measure == self.measure
+        # Filter usfirm
+        det = self.open_data(self.det, ['usfirm'])
+        kusfirm = det.usfirm == self.usfirm
+        # Filter fpi
+        det = self.open_data(self.det, ['fpi'])
+        kfpi = det.fpi.isin(self.fpis)
+        # Filter pdf (Primary / Diluted)
+        if self.pdf == 'All':
+            kpdf = True
+        elif self.pdf == 'P' or self.pdf == 'D':
+            det = self.open_data(self.det, ['pdf'])
+            kpdf = det.pdf == self.pdf
+        elif self.pdf == 'DP':
+            det = self.open_data(self.det, key+['pdf'])
+            pdfd = det.pdf == 'D'
+            pdfp = det.pdf == 'P'
+            detk = det[key].drop_duplicates()
+            detd = det[pdfd].drop_duplicates()
+            detd = detd.rename({'pdf': 'pdfd'}, axis=1)
+            detp = det[pdfp].drop_duplicates()
+            detp = detp.rename({'pdf': 'pdfp'}, axis=1)
+            detk = detk.merge(detd, how='left', on=key)
+            detk = detk.merge(detp, how='left', on=key)
+            detk['PnotD'] = detk.pdfd.isna() & detk.pdfp.notna()
+            # Keep the observations where pdf=='D' and where the key is
+            # in detk[detk.PnotD]
+            indexdet = det.index
+            det = det.merge(detk[key+['PnotD']], how='left', on=key)
+            det.index = indexdet
+            kpdf = (det.pdf == 'D') | det.PnotD
+        # Create the final filter
+        mask = kmeasure & kusfirm & kfpi & kpdf
+        det = self.open_data(self.det, fields)
+        det = det[mask].drop_duplicates()
+        # Unadjust the values if needed (value, actual)
+        if fields is not None and self.unadjust:
+            for f in ['value', 'actual']:
+                if f in fields:
+                    det[f] = self._unadjust([f], det)
+        return(det)
+
+    def _get_fields_guidance(self, fields=None):
+        """ Return the fields from the guidance file filtered. """
+        cols = ['pdicity', 'measure', 'usfirm', 'units', 'prd_yr', 'prd_mon']
+        fields_guid = [f for f in fields if f not in cols]
+        df = self.open_data(self.det_guidance, cols+fields_guid)
+        # Keep quarterly EPS forecasts for US firms
+        df = df[(df.pdicity == self.guidance_pdicity) &
+                (df.measure == self.measure) &
+                (df.usfirm == self.usfirm) &
+                (df.units == self.guidance_units)]
+        # Unadjust the values if needed (value, actual)
+        fields_adj = [f for f in fields if f in ['val_1', 'val_2', 'mean_at_date']]
+        if fields_adj and self.unadjust:
+            # Add a synthetic fpedats using end of month to get the adjustments
+            df['ym'] = (df.prd_yr*100 + df.prd_mon).astype(int)
+            df['fpedats'] = pd.to_datetime(df.ym, format='%Y%m') + MonthEnd()
+            df[fields_adj] = self._unadjust(fields_adj, df)
+        return(df[fields])
+
+    def _get_fields_ptg(self, fields=None):
+        """ Return the fields from the ptg (price targets) file filtered. """
+        None
+
+    def _get_ea_fields(self, fields):
+        """ Return fields for the earnings annoucements.
+        Uses the IBES detail file and clean the earnings annoucements.
+        """
+        # Get the earnings annoucements dates
+        cols = ['ticker', 'fpedats', 'anndats_act', 'anntims_act',
+                'actdats_act', 'acttims_act']
+        # ea = self.open_data(self.det, cols)
+        fields_det = [f for f in fields if f not in cols]
+        ea = self._get_fields_det(cols+fields_det)
+        ea = ea[ea.anndats_act.notna()].drop_duplicates()
+        # Clean the earnings annoucements
+        # Keep earnings annoucements occuring after
+        # the forecast period end date.
+        ea = ea[ea.anndats_act > ea.fpedats]
+        # Keep the earliest earnings annoucements when multiple
+        key = ['ticker', 'fpedats']
+        ea.acttims_act = pd.to_timedelta(ea.acttims_act, unit='s')
+        ea['act_time'] = pd.to_datetime(ea.actdats_act) + ea.acttims_act
+        ea['first_act_time'] = ea.groupby(key).act_time.transform('min')
+        ea = ea[ea.act_time == ea.first_act_time]
+        # Return the fields
+        return(ea[fields])
+
+    ##################
+    # User functions #
+    ##################
 
     def ibesticker_from_gvkey(self, data):
         """ Returns IBES ticker from COMPUSTAT gvkey.
-        Arguments:
-            data -- User provided data.
-                    Required columns: [gvkey, datadate]
+
+        Args:
+            data (DataFrame):       User provided data.
+                                    Required columns: [gvkey, 'col_date']
+
+        Requires:
+
         """
+        # Check requirements
+        self.d._check_date_column()
+
         # Add the permno
-        key = ['gvkey', 'datadate']
+        key = ['gvkey', self.d.col_date]
         df = self.open_data(data, key).drop_duplicates().dropna()
         df['permno'] = self.d.crsp.permno_from_gvkey(df)
         # Add the IBES ticker
@@ -400,97 +534,26 @@ class ibes(wrds_module):
         dfin.index = dfu.index
         return(dfin.fpedats)
 
-    def _get_fields_det(self, fields=None):
-        """ Return the fields from the det file filtered. """
-        key = ['ticker', 'fpedats']
-        # Filter measure
-        det = self.open_data(self.det, ['measure'])
-        kmeasure = det.measure == self.measure
-        # Filter usfirm
-        det = self.open_data(self.det, ['usfirm'])
-        kusfirm = det.usfirm == self.usfirm
-        # Filter fpi
-        det = self.open_data(self.det, ['fpi'])
-        kfpi = det.fpi.isin(self.fpis)
-        # Filter pdf (Primary / Diluted)
-        if self.pdf == 'All':
-            kpdf = True
-        elif self.pdf == 'P' or self.pdf == 'D':
-            det = self.open_data(self.det, ['pdf'])
-            kpdf = det.pdf == self.pdf
-        elif self.pdf == 'DP':
-            det = self.open_data(self.det, key+['pdf'])
-            pdfd = det.pdf == 'D'
-            pdfp = det.pdf == 'P'
-            detk = det[key].drop_duplicates()
-            detd = det[pdfd].drop_duplicates()
-            detd = detd.rename({'pdf': 'pdfd'}, axis=1)
-            detp = det[pdfp].drop_duplicates()
-            detp = detp.rename({'pdf': 'pdfp'}, axis=1)
-            detk = detk.merge(detd, how='left', on=key)
-            detk = detk.merge(detp, how='left', on=key)
-            detk['PnotD'] = detk.pdfd.isna() & detk.pdfp.notna()
-            # Keep the observations where pdf=='D' and where the key is
-            # in detk[detk.PnotD]
-            indexdet = det.index
-            det = det.merge(detk[key+['PnotD']], how='left', on=key)
-            det.index = indexdet
-            kpdf = (det.pdf == 'D') | det.PnotD
-        # Create the final filter
-        mask = kmeasure & kusfirm & kfpi & kpdf
-        det = self.open_data(self.det, fields)
-        det = det[mask].drop_duplicates()
-        # Unadjust the values if needed (value, actual)
-        if fields is not None and self.unadjust:
-            for f in ['value', 'actual']:
-                if f in fields:
-                    det[f] = self._unadjust([f], det)
-        return(det)
-
-    def _get_fields_guidance(self, fields=None):
-        """ Return the fields from the guidance file filtered. """
-        cols = ['pdicity', 'measure', 'usfirm', 'units', 'prd_yr', 'prd_mon']
-        df = self.open_data(self.det_guidance, cols+fields)
-        # Keep quarterly EPS forecasts for US firms
-        df = df[(df.pdicity == self.guidance_pdicity) &
-                (df.measure == self.measure) &
-                (df.usfirm == self.usfirm) &
-                (df.units == self.guidance_units)]
-        # Unadjust the values if needed (value, actual)
-        if fields is not None and self.unadjust:
-            # Add a synthetic fpedats using end of month to get the adjustments
-            df['ym'] = (df.prd_yr*100 + df.prd_mon).astype(int)
-            df['fpedats'] = pd.to_datetime(df.ym, format='%Y%m') + MonthEnd()
-            for f in ['val_1', 'val_2', 'mean_at_date']:
-                if f in fields:
-                    df[f] = self._unadjust([f], df)
-        return(df[fields])
-
-    def _get_fields_ptg(self, fields=None):
-        """ Return the fields from the ptg (price targets) file filtered. """
-        None
-
     def get_management_forecasts(self, data, fields, which='last',
                                  nadays=None):
         """ Return the management forecasts for a given forecast period.
         Keep the forecasts from US firms that lie between
         the previous earnings annoucement and the forecast period end date.
-        Arguments:
-            data -- User provided data
-                    Required columns:   [ticker, 'col_fpedats']
-            fields -- Fields required from the guidance file
-            which --    Defines which MF to keep if multiple ('last', 'first')
-                        If None, return all management forecasts.
-            fptype --   Forecast Period Type ('Q' for quarterly,
-                        'Y' for annual, 'S' for semiannual,
-                        'L' for long-term growth)
-            for_quarter --  Integer specifying the quarter for which the
-                            consensus should relate to.
-                            'for_quarter=0' returns the consensus
-                            for the current forecast period end.
-                            'for_quarter=N' returns the consensus for
-                            the Nth quarter after the current forecast
-                            period end.
+
+        Args:
+            data (DataFrame):   User provided data.
+                                Required columns:   [ticker, 'col_fpedats']
+
+            fields (list):      Fields required from the guidance file.
+
+            which (str):        Defines which MF to keep if multiple ('last', 'first')
+                                If None, return all management forecasts.
+
+            nadays (int):       Approximate number of days between annoucements.
+                                Needed to find an approximate date for the
+                                previous earnings annoucement when none is
+                                available.
+
         This function requires the following object attributes:
             self.guidance -- Data from the IBES guidance data.
                              Required columns:
@@ -509,7 +572,9 @@ class ibes(wrds_module):
                         no Diluted available
                         pdf='All': Use all forecasts
             self.pdicity -- Periodicity of the forecast ('QTR', 'ANN', SAN')
+
         """
+
         cols = ['ticker', 'anndats', 'anntims',
                 'prd_yr', 'prd_mon', 'actdats', 'acttims']
         fields_guid = [f for f in fields if f not in cols]
@@ -531,7 +596,7 @@ class ibes(wrds_module):
         elif which == 'first':
             df['time_keep'] = df.groupby(key).time.transform('min')
         else:
-            raise Exception("Argument 'which' must be either " +
+            raise Exception("Argument 'which' must be either "
                             "'first' or 'last'")
         df = df[df.time == df.time_keep]
         # Keep the latest activation time if more dupicates
@@ -543,45 +608,25 @@ class ibes(wrds_module):
         key = ['ticker', 'prd_yr', 'prd_mon']
         # Prepare the user data for merge
         if self.col_fpedats in data.columns:
-            dfu = self.open_data(data, ['ticker', self.col_fpedats])
-            dt = pd.to_datetime(dfu[self.col_fpedats]).dt
+            dfu = data[['ticker', self.col_fpedats]]
+            #dt = pd.to_datetime(dfu[self.col_fpedats]).dt
+            dt = dfu[self.col_fpedats].dt
             dfu['prd_yr'] = dt.year
             dfu['prd_mon'] = dt.month
         elif 'fpedats' in data.columns:
-            dfu = self.open_data(data, ['ticker', 'fpedats'])
-            dt = pd.to_datetime(dfu.fpedats).dt
+            dfu = data[['ticker', 'fpedats']]
+            #dt = pd.to_datetime(dfu.fpedats).dt
+            dt = dfu.fpedats.dt
             dfu['prd_yr'] = dt.year
             dfu['prd_mon'] = dt.month
         else:  # For use when using guidance data
-            dfu = self.open_data(data, key)
+            dfu = data[key]
+        # Correct column types if needed
+        dfu = self._correct_columns_types(dfu)
         dfin = dfu.merge(df[key+fields], how='left', on=key)
         dfin.index = dfu.index
         # Return the data
         return(dfin[fields])
-
-    def _get_ea_fields(self, fields):
-        """ Return fields for the earnings annoucements.
-        Uses the IBES detail file and clean the earnings annoucements.
-        """
-        # Get the earnings annoucements dates
-        cols = ['ticker', 'fpedats', 'anndats_act', 'anntims_act',
-                'actdats_act', 'acttims_act']
-        # ea = self.open_data(self.det, cols)
-        fields_det = [f for f in fields if f not in cols]
-        ea = self._get_fields_det(cols+fields_det)
-        ea = ea[ea.anndats_act.notna()].drop_duplicates()
-        # Clean the earnings annoucements
-        # Keep earnings annoucements occuring after
-        # the forecast period end date.
-        ea = ea[ea.anndats_act > ea.fpedats]
-        # Keep the earliest earnings annoucements when multiple
-        key = ['ticker', 'fpedats']
-        ea.acttims_act = pd.to_timedelta(ea.acttims_act, unit='s')
-        ea['act_time'] = pd.to_datetime(ea.actdats_act) + ea.acttims_act
-        ea['first_act_time'] = ea.groupby(key).act_time.transform('min')
-        ea = ea[ea.act_time == ea.first_act_time]
-        # Return the fields
-        return(ea[fields])
 
     def get_ea_fields(self, fields, data, shift=0):
         """ Return the earnings annoucement fields for a given
@@ -599,7 +644,7 @@ class ibes(wrds_module):
                         the 'det_epsus' file (analysts forecasts for US))
                         Required columns: [ticker, fpedats, anndats_act]
         """
-        # Get the earnings annoucements dates
+        # Get the earnings announcements dates
         key = ['ticker', 'fpedats']
         ea = self._get_ea_fields(key+fields)
         # Shift the values when required
@@ -628,26 +673,32 @@ class ibes(wrds_module):
     def get_ea_dates(self, data, shift=0, nadays=None):
         """ Return the earnings annoucement dates for a given
         forecast period end.
-        Arguments:
-            data --   DataFrame for which the earnings annoucements are needed.
-                    Required columns:   [ticker, 'col_fpedats']
-                                    or  [ticker, prd_yr, prd_mon]
-            shift --    Return previous or future earnings annoucement dates.
-                        If shift=-N, returns the Nth previous annoucement date.
-                        If shift=+N, returns the Nth future annoucement date.
-            nadays --   When shift != 0, set the number of days to create
-                        a 'fake' annoucement date (for instance, if shift=-1
-                        nadays=120, set the annoucement date 120 days
-                        before the current one, if shift=-2, set the
-                        announcement date 240 days before).
-        This function requires the following object attributes:
-            self.det -- Data from an IBES detail files (for instance
-                        the 'det_epsus' file (analysts forecasts for US))
-                        Required columns: [ticker, fpedats, anndats_act]
+
+        Args:
+            data (DataFrame):   DataFrame for which the earnings annoucements
+                                are needed.
+                                Required columns:   [ticker, 'col_fpedats']
+                                                or  [ticker, prd_yr, prd_mon]
+
+            shift (int):        Return previous or future earnings annoucement dates.
+                                If shift=-N, returns the Nth previous annoucement date.
+                                If shift=+N, returns the Nth future annoucement date.
+
+            nadays (int):       Approximate number of days between annoucements.
+                                Needed to find an approximate date for the
+                                previous (or next) earnings annoucement when
+                                none is available.
+
+        Required files:
+            'det':              Data from an IBES detail files (for instance
+                                the 'det_epsus' file (analysts forecasts for US))
+                                Required columns: [ticker, fpedats, anndats_act]
+
         Returns:
-            Series of earnings annoucements dates with data index.
+            Series of earnings annoucements dates with the user data index.
+
         """
-        # Get the earnings annoucements dates
+        # Get the earnings announcements dates
         key = ['ticker', 'fpedats']
         ea = self._get_ea_fields(key+['anndats_act'])
         # Shift the earnings annoucement dates when required

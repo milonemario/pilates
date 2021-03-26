@@ -3,15 +3,79 @@
 ########################
 
 Int32:
+  # country
+  - year
+  - month
+  # firm
   - permno
   - gvkey
-  - year
-  # Country data
-  - month
-  # Firm level data
   - sic_3_digit
 
 string:
-  # Firm level data
+  # country
+  # firm
   - ncusip
   - ticker
+
+float32:
+  # country
+  - gepu_current
+  - gepu_ppp
+  - australia
+  - brazil
+  - canada
+  - chile
+  - china
+  - colombia
+  - france
+  - germany
+  - greece
+  - india
+  - ireland
+  - italy
+  - japan
+  - korea
+  - netherlands
+  - russia
+  - spain
+  - singapore
+  - uk
+  - us
+  - scmp
+  - china
+  - mainland
+  - china
+  - sweden
+  - mexico
+  # firm
+  - firm_permno_realized_vol
+  - firm_permno_implied_vol
+  - implied_vol_iv_aud
+  - implied_vol_iv_aud_extended
+  - iv_aud_1st_moment
+  - implied_vol_iv_jpy
+  - implied_vol_iv_jpy_extended
+  - iv_jpy_1st_moment
+  - implied_vol_iv_cad
+  - implied_vol_iv_cad_extended
+  - iv_cad_1st_moment
+  - implied_vol_iv_chf
+  - implied_vol_iv_chf_extended
+  - iv_chf_1st_moment
+  - implied_vol_iv_gbp
+  - implied_vol_iv_gbp_extended
+  - iv_gbp_1st_moment
+  - implied_vol_iv_sek
+  - implied_vol_iv_sek_extended
+  - iv_sek_1st_moment
+  - implied_vol_iv_euro
+  - implied_vol_iv_euro_extended
+  - iv_euro_1st_moment
+  - vol_iv_epu
+  - iv_epu_1st_moment
+  - implied_vol_iv_oil
+  - implied_vol_iv_oil_extended
+  - iv_oil_1st_moment
+  - implied_vol_iv_treasury
+  - implied_vol_iv_treasury_extended
+  - iv_treasury_1st_moment
