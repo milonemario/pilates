@@ -151,7 +151,7 @@ class crsp(wrds_module):
             key = [self.col_date]
         df = self.open_data(file, key+fields)
         # Construct the object to return
-        if data:
+        if data is not None:
             # Merge and return the fields
             data_key = self.open_data(data, key)
             index = data_key.index

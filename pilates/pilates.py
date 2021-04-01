@@ -267,6 +267,36 @@ class data:
         """
         self.cores = cores
 
+    def get_lag(self, data, lag, fields=None, col_id=None, col_date=None):
+        """ Return the lag of the columns in the data (or the fields if
+        specified).
+
+        Arguments:
+            data (pd.DataFrame): DataFrame
+            lag (int):  Number of lags. If negative, returns future values.
+            fields (list, optional): If specified, only return the lag of
+                these fields. Default to None (all fields).
+            col_id (str): Identifier column (gvkey, ticker, permno, ...)
+                If None, use the module identifier column (self.col_id)
+                Defaults to None.
+            col_date: Date column (datadate, fpedats, date, ...)
+                If None, use  the module date columns (self.col_date)
+                Defaults to None.
+        """
+        if col_id is None:
+            col_id = self.col_id
+        if col_date is None:
+            col_date = self.col_date
+        if not fields:
+            fields = [f for f in data.columns if f not in [col_id, col_date]]
+        if lag != 0:
+            data = data.sort_values([col_id, col_date])
+            data_l = data.groupby(col_id)[fields].shift(lag)
+            data[fields] = data_l
+        if fields:
+            return(data[fields])
+        else:
+            return(data)
 #############################
 # General class for modules #
 #############################
@@ -731,19 +761,9 @@ class data_module:
                 If None, use  the module date columns (self.col_date)
                 Defaults to None.
         """
-        if col_id is None:
-            col_id = self.col_id
-        if col_date is None:
-            col_date = self.col_date
-        all_fields = [f for f in data.columns if f not in [col_id, col_date]]
-        if lag != 0:
-            data = data.sort_values([col_id, col_date])
-            data_l = data.groupby(col_id)[all_fields].shift(lag)
-            data[all_fields] = data_l
-        if fields is None:
-            return(data)
-        else:
-            return(data[fields])
+        return(self.d.get_lag(data, lag=lag, fields=fields,
+                              col_id = self.col_id,
+                              col_date = self.col_date))
 
 ##########################
 # Class for WRDS modules #

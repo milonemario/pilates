@@ -100,7 +100,8 @@ class icc(data_module):
         # Get the market prices
         df['M'] = self.d.comp.get_fields(['prccq'], df)
         # Get the growth rate g
-        df['g'] = self.d.fred.get_10y_US_rates(df, col_date='datadate')
+        df['g'] = self.d.fred.get_series(df, ['DGS10'], col_date='datadate')
+        #df['g'] = self.d.fred.get_10y_US_rates(df, col_date='datadate')
         df['g'] = df.g - 0.03
         if freq == 'Q':  # Transform the growth rate to quarterly if needed
             df['g'] = df.g / 4
@@ -121,7 +122,7 @@ class icc(data_module):
         dfc = df[key]
         dfc['icc'] = cc
         # Merge with the user data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(dfc, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.icc.astype('float32'))
@@ -151,7 +152,7 @@ class icc(data_module):
         dfc = df[key]
         dfc['icc'] = cc
         # Merge with the user data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(dfc, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.icc.astype('float32'))
@@ -179,7 +180,7 @@ class icc(data_module):
         dfc = df[key]
         dfc['icc'] = cc
         # Merge with the user data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(dfc, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.icc.astype('float32'))
@@ -207,7 +208,7 @@ class icc(data_module):
         dfc = df[key]
         dfc['icc'] = cc
         # Merge with the user data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(dfc, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.icc.astype('float32'))
@@ -222,7 +223,8 @@ class icc(data_module):
         # Get the market prices
         df['M'] = self.d.comp.get_fields(['prccq'], df)
         # Get the growth rate g
-        df['gamma'] = self.d.fred.get_10y_US_rates(df, col_date='datadate')
+        df['gamma'] = self.d.fred.get_series(df, ['DGS10'], col_date='datadate')
+        #df['gamma'] = self.d.fred.get_10y_US_rates(df, col_date='datadate')
         df['gamma'] = df.gamma - 0.03
         if freq == 'Q':  # Transform the growth rate to quarterly if needed
             df['gamma'] = df.gamma / 4
@@ -237,7 +239,7 @@ class icc(data_module):
         # Create the dataset to merge with the user data
         key = ['gvkey', 'datadate']
         # Merge with the user data
-        dfu = self.d.open_data(data, key)
+        dfu = self.open_data(data, key)
         dfin = dfu.merge(df[key+['icc']], how='left', on=key)
         dfin.index = dfu.index
         return(dfin.icc.astype('float32'))
@@ -270,7 +272,7 @@ class icc(data_module):
         dc = self.d.comp.get_fields(fields).drop_duplicates()
         dc.columns = key+fields_names
         # Add additional independent variables from the user data
-        dfu = self.d.open_data(data, key + ind_vars).drop_duplicates()
+        dfu = self.open_data(data, key + ind_vars).drop_duplicates()
         dc = dc.merge(dfu, how='left', on=key)
 
         ##########################################
@@ -387,7 +389,7 @@ class icc(data_module):
         # Step 5: Return the earnings predictions #
         ###########################################
         # We now open the user data and append the ICC measure
-        df = self.d.open_data(data, key)
+        df = self.open_data(data, key)
         index = df.index
         cols = ['E', 'B']
         for v in ['E', 'D', 'B', 'ROE']:

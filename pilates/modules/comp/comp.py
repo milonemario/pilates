@@ -201,17 +201,13 @@ class comp(wrds_module):
         if len(names_raw) > 0:
             df[names_raw] = self._get_names_fields(names_raw, df)
         # Get the lags if asked for
-        if len(fields) > 0:
-            df = self.get_lag(df, lag)
-            # dfl = df.groupby('gvkey')[fields].shift(lag)
-            # df[fields] = dfl
-        # Construct the object to return
+        if len(fields) > 0 and lag!=0:
+            df[fields] = self.get_lag(df, lag)
         if data is not None:
             # Merge and return the fields
             data_key = self.open_data(data, key)
-            index = data_key.index
             dfin = data_key.merge(df, how='left', on=key)
-            dfin.index = index
+            dfin.index = data_key.index
             return(dfin[fields])
         else:
             # Return the entire dataset with keys
