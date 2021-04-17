@@ -292,6 +292,9 @@ class data:
         if lag != 0:
             data = data.sort_values([col_id, col_date])
             data_l = data.groupby(col_id)[fields].shift(lag)
+            # Correct the types (groupby does not preserve them)
+            for f in fields:
+                data_l[f] = data_l[f].astype(data[f].dtype)
             data[fields] = data_l
         if fields:
             return(data[fields])

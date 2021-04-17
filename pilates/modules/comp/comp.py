@@ -1,5 +1,5 @@
 """
-Module to provide processing functions for Compustat data
+Module to provide processing functions for Compustat data.
 
 """
 
@@ -597,7 +597,7 @@ class comp(wrds_module):
         # Create the qual dummy
         df['qual'] = 0
         df.loc[df.auop=='2', 'qual'] = 1
-        return(df.qual)
+        return(df.qual.astype('Int32'))
 
     def _roa(self, data):
         """ Return ROA ( net income / total assets) """
@@ -634,4 +634,4 @@ class comp(wrds_module):
         # Create the litigation dummy
         df['techno'] = 0
         df.loc[df.sic.isin(rs), 'techno'] = 1
-        return(df.techno)
+        return(df.techno.astype('Int32'))

@@ -3,6 +3,19 @@
 ########################
 
 Int32:
+  # ann
   - permno
   - year
-  
+  - numdays
+  # qtr
+
+float32:
+  # ann
+  - alpha
+  - delta
+  - epsilon
+  - mu
+  - invpsi
+  - minlik
+  - pin
+  # qtr

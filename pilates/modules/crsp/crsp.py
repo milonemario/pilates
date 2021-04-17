@@ -5,6 +5,9 @@ Provides processing functions for CRSP data.
 from pilates import wrds_module
 import pandas as pd
 import numpy as np
+import numba
+
+from sklearn.linear_model import LinearRegression
 
 
 class crsp(wrds_module):
@@ -16,8 +19,8 @@ class crsp(wrds_module):
         self.col_date = 'date'
         self.key = [self.col_id, self.col_date]
         # For link with COMPUSTAT
-        self.linktype = ['LC', 'LU']
-        self.linkprim = ['P', 'C']
+        self.linktype = ['LU', 'LC', 'LS']
+        # self.linkprim = ['P', 'C']
         # Default data frequency
         self.freq = 'M'
 
@@ -34,45 +37,63 @@ class crsp(wrds_module):
 
     def permno_from_gvkey(self, data):
         """ Returns CRSP permno from COMPUSTAT gvkey.
+
+        This code is insired from WRDS sample program 'merge_funda_crsp_byccm.sas'
+        available on the WRDS website.
+
         Arguments:
             data -- User provided data.
-                    Required columns: [gvkey, 'col_date']
+                    Required columns: [gvkey, datadate]
             link_table --   WRDS provided linktable (ccmxpf_lnkhist)
             linktype -- Default: [LC, LU]
             linkprim -- Default: [P, C]
         """
         # Columns required from data
-        key = ['gvkey', self.d.col_date]
+        key = ['gvkey', 'datadate']
         # Columns required from the link table
         cols_link = ['gvkey', 'lpermno', 'linktype', 'linkprim',
                      'linkdt', 'linkenddt']
-        # Open the data
-        data_key = self.open_data(data, key).drop_duplicates().dropna()
+        # Open the user data
+        df = self.open_data(data, key).drop_duplicates().dropna()
+        ## Create begin and edn of fiscal year variables
+        #df['endfyr'] = df.datadate
+        #df['beginfyr'] = (df.datadate - np.timedelta64(11, 'M')).astype('datetime64[M]')
+        # Open the link data
         link = self.open_data(self.linktable, cols_link)
         link = link.dropna(subset=['gvkey', 'lpermno', 'linktype', 'linkprim'])
         # Retrieve the specified links
-        link = link[(link.linktype.isin(self.linktype)) &
-                    (link.linkprim.isin(self.linkprim))]
-        link = link[['gvkey', 'lpermno', 'linkdt', 'linkenddt']]
+        link = link[(link.linktype.isin(self.linktype))]
+        #link = link[['gvkey', 'lpermno', 'linkdt', 'linkenddt']]
         # Merge the data
-        dm = data_key.merge(link, how='left', on='gvkey')
+        dm = df.merge(link, how='left', on='gvkey')
         # Filter the dates (keep correct matches)
-        cond1 = (pd.notna(dm.linkenddt) &
-                 (dm[self.d.col_date] >= dm.linkdt) &
-                 (dm[self.d.col_date] <= dm.linkenddt))
-        cond2 = (pd.isna(dm.linkenddt) & (dm.datadate >= dm.linkdt))
-        dm = dm[cond1 | cond2]
+        ## Note: Use conditions from WRDS code.
+        cond1 = (dm.linkdt <= dm.datadate) | (pd.isna(dm.linkdt))
+        cond2 = (dm.datadate <= dm.linkenddt) | (pd.isna(dm.linkenddt))
+        dm = dm[cond1 & cond2]
+
+        # Deal with duplicates
+        dups = dm[key].duplicated(keep=False)
+        dmf = dm[~dups]     # Final links list
+        dmd = dm[dups].set_index(['gvkey', 'datadate'])
+        ## Favor linkprim, in order: 'P', 'C', 'J' and 'N'
+        for lp in ['P', 'C', 'J']:
+            dups_lp = dmd[dmd.linkprim==lp]
+            dmd = dmd[~dmd.index.isin(dups_lp.index)]
+            dups_lp = dups_lp.reset_index()
+            dmf = pd.concat([dmf, dups_lp])
+
         # Rename lpermno to permno and remove unnecessary columns
-        dm = dm.rename(columns={'lpermno': 'permno'})
-        dm = dm[['gvkey', self.d.col_date, 'permno']]
+        dmf = dmf.rename(columns={'lpermno': 'permno'})
+        dmf = dmf[['gvkey', 'datadate', 'permno']]
         # Check for duplicates on the key
-        n_dup = dm.shape[0] - dm[key].drop_duplicates().shape[0]
+        n_dup = dmf.shape[0] - dmf[key].drop_duplicates().shape[0]
         if n_dup > 0:
             print("Warning: The merged permno",
                   "contains {:} duplicates".format(n_dup))
         # Add the permno to the user's data
         dfu = self.open_data(data, key)
-        dfin = dfu.merge(dm, how='left', on=key)
+        dfin = dfu.merge(dmf, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.permno)
 
@@ -179,7 +200,21 @@ class crsp(wrds_module):
         dfu[fields] = self._get_fields(fields, dfu, self.dsf)
         return(dfu[fields])
 
-    def _value_for_data(self, var, data, nperiods, useall):
+    def _get_window_sort(self, nperiods, caldays, min_periods):
+        # Define the window and how the data should be sorted
+        if caldays is None:
+            window = abs(nperiods)
+            ascending = (nperiods < 0)
+        else:
+            window = str(abs(caldays)) + "D"
+            ascending = (caldays < 0)
+            if min_periods is None:
+                print("Warning: It is advised to provide a minimum number of observations "
+                      "to compute aggregate values when using the 'caldays' arguments. "
+                      "No doing so will result in small rolling windows.")
+        return window, ascending
+
+    def _value_for_data(self, var, data, ascending, useall):
         """" Add values to the users data and return the values.
         Arguments:
             df --   Internal data containing the values
@@ -195,10 +230,13 @@ class crsp(wrds_module):
         """
         key = self.key
         var.name = 'var'
-        if nperiods < 0:
-            values = var.reset_index()
-        else:
-            values = var.shift(-nperiods).reset_index()
+        values = var.reset_index()
+        #if nperiods == 0:
+        #    values = var.reset_index()
+        #else:
+        #    # Check that the shift onl occurs within permnos
+        #    import ipdb; ipd.set_trace();
+        #    values = var.shift(-nperiods).reset_index()
         # Make sure the types are correct
         values = self._correct_columns_types(values)
         # Open user data
@@ -212,8 +250,9 @@ class crsp(wrds_module):
             # Merge on permno and on closest date
             # Use the last or next trading day if requested
             # Shift a maximum of 6 days
-            direction = 'backward'
-            if nperiods > 0:
+            if ascending:
+                direction = 'backward'
+            else:
                 direction = 'forward'
             dfin = pd.merge_asof(dfu, values,
                                  left_on=self.d.col_date,
@@ -253,7 +292,7 @@ class crsp(wrds_module):
         dfin.index = dfu.index
         return(dfin.tso)
 
-    def compounded_return(self, data, nperiods=1, useall=True):
+    def compounded_return(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
         r"""
         Return the compounded daily returns over 'nperiods' periods.
         If using daily frequency, one period refers to one day.
@@ -270,6 +309,8 @@ class crsp(wrds_module):
                         compounded return of the next available trading day
                         (if nperiods>0).
         """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
         # Check arguments
         if nperiods==0:
             raise Exception("nperiods must be different from 0.")
@@ -278,16 +319,15 @@ class crsp(wrds_module):
         fields = ['ret']
         sf = self._get_fields(fields)
         # Create the time series index
-        sf = sf.set_index(self.col_date)
+        sf = sf.set_index(self.col_date).sort_index(ascending=ascending)
         # Compute the compounded returns
         sf['ln1ret'] = np.log(1 + sf.ret)
-        window = abs(nperiods)
-        sumln = sf.groupby(self.col_id).rolling(window).ln1ret.sum()
+        sumln = sf.groupby(self.col_id).rolling(window, min_periods=min_periods).ln1ret.sum()
         cret = np.exp(sumln) - 1
         # Return the variable for the user data
-        return(self._value_for_data(cret, data, nperiods, useall))
+        return(self._value_for_data(cret, data, ascending, useall))
 
-    def volatility_return(self, data, nperiods=1, useall=True):
+    def volatility_return(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
         r"""
         Return the daily volatility of returns over 'nperiods' periods.
         If using daily frequency, one period refers to one day.
@@ -305,18 +345,19 @@ class crsp(wrds_module):
                         volatility of the next available trading day
                         (if nperiods>0).
         """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
         # Open the necessary data
         key = [self.col_id, self.col_date]
         fields = ['ret']
         sf = self._get_fields(fields)
         # Create the time series index
-        sf = sf.set_index(self.col_date)
+        sf = sf.set_index(self.col_date).sort_index(ascending=ascending)
         # Compute the volatility
-        window = abs(nperiods)
-        vol = sf.groupby(self.col_id).rolling(window).ret.std()
-        return(self._value_for_data(vol, data, nperiods, useall))
+        vol = sf.groupby(self.col_id).rolling(window, min_periods=min_periods).ret.std()
+        return(self._value_for_data(vol, data, ascending, useall))
 
-    def average_bas(self, data, nperiods=1, useall=True, bas=None):
+    def average_bas(self, data, nperiods=1, caldays=None, min_periods=None, useall=True, bas=None):
         r"""
         Return the daily average bid-ask spread over 'nperiods' periods.
         If using daily frequency, one period refers to one day.
@@ -337,6 +378,8 @@ class crsp(wrds_module):
                     'bid' and 'ask' from CRSP. If 'lohi', use the fields
                     'bidlo' and 'askhi' from CRSP.
         """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
         # Open the necessary data
         key = self.key
         fields = ['bid', 'ask']
@@ -349,15 +392,16 @@ class crsp(wrds_module):
         dsf = self._get_fields(fs)
         dsf.columns = key + fields
         # Create the time series index
-        dsf = dsf.set_index(self.col_date)
+        dsf = dsf.set_index(self.col_date).sort_index(ascending=ascending)
         # Compute the average bid-ask spread
         # (Ask - Bid) / midpoint
         dsf['spread'] = (dsf.ask - dsf.bid) / ((dsf.ask + dsf.bid)/2.)
-        window = abs(nperiods)
-        bas = dsf.groupby('permno').rolling(window).spread.mean()
-        return(self._value_for_data(bas, data, nperiods, useall))
+        # Bid-ask spread cannot be negative
+        dsf['spread'] = dsf['spread'].clip(0, None)
+        bas = dsf.groupby('permno').rolling(window, min_periods=min_periods).spread.mean()
+        return(self._value_for_data(bas, data, ascending, useall))
 
-    def turnover(self, data, nperiods=1, useall=True):
+    def turnover(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
         r""" Return the daily turnover over 'nperiods' (usually days).
 
         Args:
@@ -376,6 +420,8 @@ class crsp(wrds_module):
                                 (if nperiods>0).
 
         """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
         # Open the necessary data
         key = self.key
         fields = ['shrout', 'vol']
@@ -385,14 +431,13 @@ class crsp(wrds_module):
         # Some type conversion to make sure the rolling window will work.
         dsf['shrout'] = dsf.shrout.astype('float32')
         # Create the time series index
-        dsf = dsf.set_index('date')
+        dsf = dsf.set_index(self.col_date).sort_index(ascending=ascending)
         # Compute the average turnover
         dsf['vol_sh'] = dsf.vol / (dsf.shrout * 1000)
-        window = abs(nperiods)
-        turnover = dsf.groupby('permno').rolling(window).vol_sh.mean()
-        return(self._value_for_data(turnover, data, nperiods, useall))
+        turnover = dsf.groupby(self.col_id).rolling(window, min_periods=min_periods).vol_sh.mean()
+        return(self._value_for_data(turnover, data, ascending, useall))
 
-    def turnover_shu2000(self, data, nperiods=1, useall=True):
+    def turnover_shu2000(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
         r"""
         Return the daily turnover over 'ndays' days.
         Arguments:
@@ -408,6 +453,8 @@ class crsp(wrds_module):
                         turnover of the next available trading day
                         (if ndays>0).
         """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
         # Open the necessary data
         key = self.key
         fields = ['shrout', 'vol']
@@ -415,13 +462,12 @@ class crsp(wrds_module):
         # Note: The volume in the daily data is expressed in units of shares.
         dsf = self._get_fields(fields)
         # Create the time series index
-        dsf = dsf.set_index('date')
+        dsf = dsf.set_index(self.col_date).sort_index(ascending=ascending)
         # Compute the average turnover
         dsf['vol_sh'] = dsf.vol / (dsf.shrout * 1000)
         dsf['onemvs'] = 1. - dsf.vol_sh
-        window = abs(nperiods)
-        turnover = 1 - dsf.groupby('permno').rolling(window).onemvs.apply(np.prod, raw=True)
-        return(self._value_for_data(turnover, data, nperiods, useall))
+        turnover = 1 - dsf.groupby(self.col_id).rolling(window, min_periods=min_periods).onemvs.apply(np.prod, raw=True)
+        return(self._value_for_data(turnover, data, ascending, useall))
 
     def age(self, data):
         """ Age of the firm - Number of years with return history.
@@ -454,9 +500,9 @@ class crsp(wrds_module):
         dfin.loc[dfin.age_crsp > dfin.age, 'age'] = dfin.age_crsp
         dfin['age'] = dfin.age.dt.days / 365.
         dfin.index = dfu.index
-        return(dfin.age)
+        return(dfin.age.astype('float32'))
 
-    def beta(self, data, ndays=1, useall=True):
+    def beta(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
         r"""
         Return the beta coefficient computed over 'ndays' days.
         The beta is the slope of the regression of daily stock returns
@@ -473,6 +519,8 @@ class crsp(wrds_module):
                         value of the next available trading day
                         (if ndays>0).
         """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
         # Open the necessary data
         key = self.key
         ret = 'ret'
@@ -481,19 +529,22 @@ class crsp(wrds_module):
         # Get the value-weighted market returns
         dsf[mret] = self._get_fields([mret], data=dsf, file=self.dsi)
         # Create the time series index
-        dsf = dsf.set_index([self.col_date])
+        dsf = dsf.set_index(self.col_date).sort_index(ascending=ascending)
         # Compute the rolling beta
-        #import ipdb; ipdb.set_trace();
-        window = abs(ndays)
-        cov = dsf.groupby(self.col_id).rolling(window)[[ret,mret]].cov()
-        cov = cov.unstack()[mret] # Gives cov(ret, mret) and cov(mret, mret)
-        beta = cov[ret] / cov[mret]
-        return(self._value_for_data(beta, data, ndays, useall))
+
+        def compute_beta(dfg):
+            cov = dfg[[ret, mret]].rolling(window=window, min_periods=min_periods).cov()
+            cov = cov.unstack()[mret] # Gives cov(ret, mret) and cov(mret, mret)
+            beta = cov[ret] / cov[mret]
+            return beta
+
+        beta = dsf.groupby(self.col_id).apply(compute_beta)
+        return(self._value_for_data(beta, data, ascending, useall))
 
     def delist(self, data, caldays=1):
         r"""
         Return the delist dummy.
-        Delist is at one if the firm is delisted within the next 'ndays' days
+        Delist is at one if the firm is delisted within the next 'caldays' days
         for financial difficulties.
         Arguments:
             data -- User data.
@@ -530,3 +581,202 @@ class crsp(wrds_module):
                  (dfin[self.d.col_date]<=dfin.enddate), 'delist'] = 1
         dfin.index = index
         return(dfin.delist)
+
+    def crashrisk_hmt(self, data):
+        """ Crash Risk as defined in Hutton, Marcus and Tehranian (JFE 2009).
+
+        Note: Computing the crash risk requires both CRSP and Compustat data
+        as one needs to identify fiscal years. Therefore the availability of
+        this variable depends on the match CRSP-Compustat.
+
+        It is therefore recommended to add the result of this funtion to
+        Compustat data.
+
+        Arguments:
+            data -- User data.
+                    Required columns: [permno, datadate]
+
+        """
+
+        # Open the necessary data
+        ## Get the returns
+        df = self._get_fields(['ret'])
+        ## Get the value-weighted market index
+        df['vwretd'] = self._get_fields(['vwretd'], data=df, file=self.dsi)
+
+        # Identify the weeks
+        df['year'] = df.date.dt.year
+        df['week'] = df.date.dt.isocalendar().week
+        df['yw'] = df.year*100 + df.week
+        df.drop(columns=['year', 'week'], inplace=True)
+
+        # Compute weekly returns for stock and index
+        df['ln1ret'] = np.log(1+df.ret)
+        df['ln1vwret'] = np.log(1+df.vwretd)
+        ln1ret_week = df.groupby([self.col_id, 'yw']).ln1ret.sum()
+        ln1vwret_week = df.groupby([self.col_id, 'yw']).ln1vwret.sum()
+        ret_week = np.exp(ln1ret_week) - 1
+        vwret_week = np.exp(ln1vwret_week) - 1
+        dfret = pd.concat([ret_week, vwret_week], axis=1)
+        dfret.columns = ['ret', 'vwret']
+
+        # Regress stock returns on index (with lead and lag terms)
+        dfret['vwret_lag1'] = dfret.groupby(level='permno')['vwret'].shift(1)
+        dfret['vwret_lead1'] = dfret.groupby(level='permno')['vwret'].shift(-1)
+        dfret = dfret.reset_index()
+        # Drop missing values
+        dfret = dfret.dropna()
+
+        # Compute firm-specific weekly returns
+        ## Note: one regression by permno
+
+        def spec_week_ret(dfg):
+            y = dfg.ret
+            X = dfg[['vwret_lag1', 'vwret', 'vwret_lead1']]
+            m = LinearRegression().fit(X, y)
+            return np.log(1 + (y-m.predict(X)))
+
+        dfsret = dfret.groupby('permno').apply(spec_week_ret)
+        dfsret = dfsret.reset_index()
+        dfsret.index = dfsret.level_1
+        # Add the specific weekly return to the return data
+        dfret['specret'] = dfsret['ret']
+
+        ## Get compustat fiscal years
+        comp_freq = self.d.comp.freq
+        self.d.comp.set_frequency('Annual')
+        df_comp = self.d.comp.get_fields([])
+        self.d.comp.set_frequency(comp_freq)
+        ## Add permno
+        df_comp['permno'] = self.permno_from_gvkey(df_comp)
+        #df_comp['datadate_m'] = df_comp.datadate
+        df_comp = df_comp[['permno', 'datadate']]
+        ## Merge compustat datadate to CRSP data
+        ### Create a date column corresponding to the end of the year-week.
+        dfret['year'] = (dfret.yw / 100).astype(int)
+        dfret['week'] = dfret.yw - (dfret.year*100)
+        dfret['ydt'] = pd.to_datetime(dfret.year, format='%Y')
+        dfret['date'] = dfret.ydt + pd.to_timedelta(dfret.week, unit='W')
+
+        # Create the final return data to merge with Compustat
+        dfretm = dfret[['permno', 'date', 'specret']]
+
+        ### Match all CRSP date within a year before datadate as belonging
+        ### to that fiscal year.
+        dfretm = dfretm.sort_values('date')
+        df_comp = df_comp.dropna()
+        df_comp = df_comp.sort_values('datadate')
+        dfretm = self._correct_columns_types(dfretm)
+        dfm = pd.merge_asof(dfretm, df_comp,
+                            left_on='date',
+                            right_on='datadate',
+                            by='permno',
+                            tolerance=pd.Timedelta('364 day'),
+                            direction='forward')
+        ### Keep observations with datadate
+        dfm = dfm[dfm.datadate.notna()]
+
+        # Compute crash-risk dummy
+        ## Compute mean and stdev of specific firm return over the fiscal year
+        dfm['specret_mean'] = dfm.groupby(['permno', 'datadate'])['specret'].transform('mean')
+        dfm['specret_sd'] = dfm.groupby(['permno', 'datadate'])['specret'].transform('std')
+        dfm['crash'] = 0
+        cond = (dfm.specret < dfm.specret_mean - 3.09*dfm.specret_sd)
+        dfm.loc[cond, 'crash'] = 1
+
+        # Merge to user data
+        key = ['permno', 'datadate']
+        dfu = self.open_data(data, key)
+        index = dfu.index
+        # Final crash dummy
+        df_crash = dfm.groupby(key)['crash'].max().reset_index()
+        df_crash = self._correct_columns_types(df_crash)
+        # Merge the dates and create the delist dummy
+        dfin = dfu.merge(df_crash, how='left', on=key)
+        dfin.index = index
+        return(dfin.crash.astype('float32'))
+
+    def ncskew_chs(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
+        """ Negative Coefficient of Skewness as defined in Chen, Hong and Stein (JFE 2001).
+
+        Arguments:
+            data        User data.
+                        Required columns: [permno, 'col_date']
+            nperiods    Number of periods to compute the measure
+                        (usually in trading days).
+
+        """
+
+        # Open the necessary data
+        key = self.key
+        fields = ['ret']
+        df = self._get_fields(fields)
+        df['vwretd'] = self._get_fields(['vwretd'], data=df, file=self.dsi)
+
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
+        # Create the time series index in the correct order
+        df = df.set_index(self.col_date).sort_index(ascending=ascending)
+        # Compute market adjusted returns (log changes in price)
+        df['lnret'] = np.log(1+df.ret) - np.log(1+df.vwretd)
+
+        # Function to compute ncskew given a series of returns
+        @numba.jit(nopython=True)
+        def compute_ncskew(lnret):
+            # Demean returns
+            ret_dem = lnret - np.nanmean(lnret)
+            # Compute sums of squares and cubes
+            sum_ret2 = np.nansum(ret_dem**2)
+            sum_ret3 = np.nansum(ret_dem**3)
+            # Compute NCSKEW
+            n = lnret.size - np.count_nonzero(np.isnan(lnret))
+            ncskew = -( n * ((n-1)**(3./2.)) * sum_ret3 ) / ( (n-1) * (n-2) * (sum_ret2**(3./2.)) )
+            return ncskew
+
+        ncskew = df.groupby(self.col_id).rolling(window, min_periods=min_periods).lnret.apply(compute_ncskew, raw=True)
+
+        # Return the variable for the user data
+        return(self._value_for_data(ncskew, data, ascending, useall))
+
+    def duvol_chs(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
+        """ Down-to-Up Volatility as defined in Chen, Hong and Stein (JFE 2001).
+
+        Arguments:
+            data        User data.
+                        Required columns: [permno, 'col_date']
+
+        """
+
+        # Open the necessary data
+        key = self.key
+        fields = ['ret']
+        df = self._get_fields(fields)
+        df['vwretd'] = self._get_fields(['vwretd'], data=df, file=self.dsi)
+
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
+        # Create the time series index in the correct order
+        df = df.set_index(self.col_date).sort_index(ascending=ascending)
+        # Compute market adjusted returns (log changes in price)
+        df['lnret'] = np.log(1+df.ret) - np.log(1+df.vwretd)
+
+        # Function to compute ncskew given a series of returns
+        @numba.jit(nopython=True)
+        def compute_duvol(lnret):
+            # Compute the mean and split Ups and Downs
+            mean = np.nanmean(lnret)
+            ups = lnret[lnret >= mean]
+            downs = lnret[lnret < mean]
+            # Compute sum of squares
+            su2 = np.nansum(ups**2)
+            sd2 = np.nansum(downs**2)
+            # Compute DUVOL
+            nu = len(ups)
+            nd = len(downs)
+            duvol = np.log( ((nu-1)*su2) / ((nd-1)*sd2) )
+            return duvol
+
+        ncskew = df.groupby(self.col_id).rolling(window, min_periods=min_periods).lnret.apply(compute_duvol, raw=True)
+
+        # Return the variable for the user data
+        return(self._value_for_data(ncskew, data, ascending, useall))

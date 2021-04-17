@@ -6,6 +6,7 @@
 Int32:
   # names
   - gvkey
+  - naics
   - sic
   - year1
   - year2
@@ -22,6 +23,10 @@ Int32:
   - au
   - auop
   - auopic
+  - naicsh
+  - cshtr_c
+  - cshtr_f
+  - rank
   # fundq
   - fyearq
   - fqtr
@@ -37,7 +42,6 @@ string:
   - tic
   - cusip
   - cik
-  - naics
   - gsubind
   - gind
   # funda
@@ -61,7 +65,6 @@ string:
   - fic
   - ceoso
   - cfoso
-  - naicsh
   # fundq
   - acctchg
   - acctstd
@@ -988,6 +991,19 @@ float32:
   - xuwoi
   - xuwrei
   - xuwti
+  - dvpsp_c
+  - dvpsx_c
+  - prcc_c
+  - prch_c
+  - prcl_c
+  - adjex_c
+  - dvpsp_f
+  - dvpsx_f
+  - mkvalt
+  - prcc_f
+  - prch_f
+  - prcl_f
+  - adjex_f
   # fundq
   - acchgq
   - acomincq

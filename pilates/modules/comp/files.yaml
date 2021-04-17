@@ -14,14 +14,14 @@
 
 # Firm informations (SIC, ...)
 names:
-  schema: comp_na_annual_all
+  schema: comp_na_daily_all
   table: names
   index:
     - gvkey
 
 # Fundamental Annual data
 funda:
-  schema: comp_na_annual_all
+  schema: comp_na_daily_all
   table: funda
   index:
     - gvkey
@@ -29,7 +29,7 @@ funda:
 
 # Fundamental Quarterly data
 fundq:
-  schema: comp_na_annual_all
+  schema: comp_na_daily_all
   table: fundq
   index:
     - datadate
