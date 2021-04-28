@@ -1,0 +1,264 @@
+#################
+# Files for ISS #
+#################
+
+# The files are defined as they are in WRDS.
+# The module allows to import files purchased separately from ISS.
+
+## For purchased data from ISS ##
+# The data comes in the forms of monthly zip files
+# The module requires the folder where all the data is located.
+
+##### Incentive Lab Files #####
+
+# Beneficial Ownership
+beneown:
+  schema: iss_incentive_lab
+  table: beneown
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: BeneOwn.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: beneown.sas7bdat
+
+# BlockHolder Ownership
+bhown:
+  schema: iss_incentive_lab
+  table: bhown
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: BHOwn.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: bhown.sas7bdat
+
+# Company Data by Fiscal Year
+companyfy:
+  schema: iss_incentive_lab
+  table: companyfy
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: CompanyFY.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: companyfy.sas7bdat
+
+# Peer Data for Benchmark Compensation Comparisons
+comppeer:
+  schema: iss_incentive_lab
+  table: comppeer
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: CompPeer.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: comppeer.sas7bdat
+
+# Compensation Consultant
+consultant:
+  schema: iss_incentive_lab
+  table: consultant
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: Consultant.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: consultant.sas7bdat
+
+# Director Annual Compensation
+dircomp:
+  schema: iss_incentive_lab
+  table: dircomp
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: DirComp.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: dircomp.sas7bdat
+
+# Option Exercises and Stock Vested Table
+exervest:
+  schema: iss_incentive_lab
+  table: exervest
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: ExerVest.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: exervest.sas7bdat
+
+# Absolute Performance Goals
+gpbaabs:
+  schema: iss_incentive_lab
+  table: gpbaabs
+  index:
+    - grantid
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: GpbaAbs.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: gpbaabs.sas7bdat
+
+# Accelerated Performance Goals
+gpbaacc:
+  schema: iss_incentive_lab
+  table: gpbaacc
+  index:
+    - grantid
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: GpbaAcc.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: gpbaacc.sas7bdat
+
+# Peer Data for Accelerated Performance Goals
+gpbaaccpeer:
+  schema: iss_incentive_lab
+  table: gpbaaccpeer
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: GpbaAccPeer.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: gpbaaccpeer.sas7bdat
+
+# Grants of Plan-Based Awards Table
+gpbagrant:
+  schema: iss_incentive_lab
+  table: gpbagrant
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: GpbaGrant.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: gpbagrant.sas7bdat
+
+# Relative Performance Goals
+gpbarel:
+  schema: iss_incentive_lab
+  table: gpbarel
+  index:
+    - grantid
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: GpbaRel.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: gpbarel.sas7bdat
+
+# Peer Data for Relative Performance Goals
+gpbarelpeer:
+  schema: iss_incentive_lab
+  table: gpbarelpeer
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: GpbaRelPeer.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: gpbarelpeer.sas7bdat
+
+# Holding Requirements / Stock Ownership Guidelines Data
+holdingreq:
+  schema: iss_incentive_lab
+  table: holdingreq
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: HoldingReq.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: holdingreq.sas7bdat
+
+# Options - Outstanding Equity at Fiscal Year-End Table
+oeoption:
+  schema: iss_incentive_lab
+  table: oeoption
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: OEOption.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: oeoption.sas7bdat
+
+# Stock - Outstanding Equity at Fiscal Year-End Table
+oestock:
+  schema: iss_incentive_lab
+  table: oestock
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: OEStock.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: oestock.sas7bdat
+
+# Participant Data by Fiscal Year
+participantfy:
+  schema: iss_incentive_lab
+  table: participantfy
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: ParticipantFY.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: participantfy.sas7bdat
+
+# Summary Compensation Table
+sumcomp:
+  schema: iss_incentive_lab
+  table: sumcomp
+  index:
+    - cik
+  file:
+    csv:
+      zip: IncentiveLabAcademicDataCSV.zip
+      name: SumComp.csv
+    sas:
+      zip: IncentiveLabAcademicDataSAS.zip
+      name: sumcomp.sas7bdat

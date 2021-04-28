@@ -422,7 +422,7 @@ class data_module:
                 # the correct schema
                 t = pa.Table.from_pandas(df)
                 pqschema = t.schema
-                pqwriter = pq.ParquetWriter(filepath_pq, t.schema)
+                pqwriter = pq.ParquetWriter(filepath_pq, t.schema, use_deprecated_int96_timestamps=True)
             else:
                 t = pa.Table.from_pandas(df, schema=pqschema)
                 # t = pa.Table.from_pandas(df)
@@ -442,12 +442,12 @@ class data_module:
             - SAS (.sas7bdat)
 
         Args:
-            path (str): Path of the file to convert.
-            force (bool, optional): If False, the file is not re-converted.
-                Defaults to False.
-            delim_whitespace (bool): Set to True if the file is a CSV with
-                baln separateors (tab for instance). Passed to pandas.read_csv().
-                Defaults to False.
+            path (str):                 Path of the file to convert.
+            force (bool, optional):     If False, the file is not re-converted.
+                                        Defaults to False.
+            delim_whitespace (bool):    Set to True if the file is a CSV with
+                                        blank separateors (tab for instance). Passed to pandas.read_csv().
+                                        Defaults to False.
 
         Todo:
             * Add support for more file formats (Stata, ...)
@@ -603,12 +603,24 @@ class data_module:
             # Apply the non-dates
             if len(chnd) > 0:
                 for k in chnd.keys():
-                    df.loc[:, k] = df[k].astype(chnd[k])
+                    # If the current type is object while it should be numeric,
+                    # remove possible unwanted characters (' and ")
+                    if df[k].dtype=='object' and chnd[k]=='float':
+                        for char in ['"', "'", " "]:
+                            df[k] = df[k].str.replace(char, "")
+                    # Convert the field
+                    try:
+                        #if k=='cik':
+                        #    import ipdb; ipdb.set_trace();
+                        df.loc[:, k] = df[k].astype(chnd[k], errors='ignore')
+                    except:
+                        import ipdb; ipdb.set_trace();
+                        raise Exception('Error type conversion for column '+k)
             # Apply the dates
             if len(chd) > 0:
                 for k in chd.keys():
                     #df.loc[:, k] = pd.to_datetime(df[k]).dt.date
-                    df.loc[:, k] = pd.to_datetime(df[k])
+                    df.loc[:, k] = pd.to_datetime(df[k], errors='coerce')
                     #df.loc[df[k].isna(), k] = np.nan
 
         # Then use the user provided types
