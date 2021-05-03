@@ -14,6 +14,26 @@ The library has the ability to directly download data from WRDS servers if neces
 
 ## Installation
 
+It is recommended to install to following dependencies with your preferred
+python manager (conda for instance) prior to installing pilates:
+
+- numpy
+- padas
+- scipy
+- scikit-learn
+- pyarrow
+- pyyaml
+- psycopg2
+- wget
+- xlrd
+- openpyxl
+
+Pilates also depends on:
+- rapidfuzz
+- fredapi
+
+
+
 To install, just run
 ```
 python setup.py install
