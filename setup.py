@@ -23,3 +23,4 @@ setup(name='pilates',
             'openpyxl'
       ],
       zip_safe=False)
+
