@@ -1,0 +1,43 @@
+##############################
+# Files for Fama-French data #
+##############################
+
+# 48 Industry definitions
+sic48:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes48.zip
+  file: Siccodes48.txt
+
+# 5 Industry definitions
+sic5:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes5.zip
+  file: Siccodes5.txt
+
+# 10 Industry definitions
+sic10:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes10.zip
+  file: Siccodes10.txt
+
+# 12 Industry definitions
+sic12:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes12.zip
+  file: Siccodes12.txt
+
+# 17 Industry definitions
+sic17:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes17.zip
+  file: Siccodes17.txt
+
+# 30 Industry definitions
+sic30:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes30.zip
+  file: Siccodes30.txt
+
+# 38 Industry definitions
+sic38:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes38.zip
+  file: Siccodes38.txt
+
+# 49 Industry definitions
+sic49:
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Siccodes49.zip
+  file: Siccodes49.txt

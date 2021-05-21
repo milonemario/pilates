@@ -1,0 +1,14 @@
+################################
+# Column types for Fama-French #
+################################
+
+Int32:
+  # sic48
+  - sic
+  - code
+
+string:
+  # sic48
+  - name_short
+  - name
+  - name_sic

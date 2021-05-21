@@ -430,10 +430,7 @@ class data_module:
         print('\r')
         pqwriter.close()
 
-    def _convert_data(self, name, path,
-                     force=False,
-                     delim_whitespace=False,
-                     nrows=None):
+    def _convert_data(self, name, path, force=False, delim_whitespace=False, nrows=None):
         """ Convert the file to parquet and save it in the
         data directory.
 
@@ -461,7 +458,7 @@ class data_module:
             print('Conversion '+name)
             # Get the file type
             filename, ext = os.path.splitext(os.path.basename(path))
-            # Ovewride the file type if provided
+            # Overwrite the file type if provided
             if 'type' in self.files[name]:
                 ext = '.' + self.files[name]['type']
             # Open the file (by chunks)
@@ -659,11 +656,8 @@ class data_module:
             with zipfile.ZipFile(download_path, 'r') as zip_ref:
                 zip_ref.extractall(self.d.datadownload)
 
-    def add_file(self, name, path=None, force=False,
-                 # For CSV files
-                 delim_whitespace=False,
-                 # for Excel files
-                 nrows=None):
+    def add_file(self, name, path=None, force=False, delim_whitespace=False, nrows=None):
+        # Note: delim_whitespace for CSV files, nrows for Excel files
         """ Add a file to the module.
         Converts and make the file available for the module to use.
 

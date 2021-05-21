@@ -18,7 +18,8 @@ It is recommended to install to following dependencies with your preferred
 python manager (conda for instance) prior to installing pilates:
 
 - numpy
-- padas
+- pandas
+- numba
 - scipy
 - scikit-learn
 - pyarrow

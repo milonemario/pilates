@@ -11,6 +11,7 @@ setup(name='pilates',
       install_requires=[
             'numpy',
             'pandas',
+            'numba',
             'scipy',
             'sklearn',
             'pyarrow',
@@ -23,4 +24,3 @@ setup(name='pilates',
             'openpyxl'
       ],
       zip_safe=False)
-
