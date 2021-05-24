@@ -34,3 +34,10 @@ fundq:
   index:
     - datadate
     - gvkey
+
+# S&P ratings
+adsprate:
+  schema: comp_na_daily_all
+  table: adsprate
+  index:
+    - gvkey

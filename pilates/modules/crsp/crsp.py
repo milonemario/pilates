@@ -28,9 +28,11 @@ class crsp(wrds_module):
         if frequency in ['Monthly', 'monthly', 'M', 'm']:
             self.freq = 'M'
             self.sf = self.msf
+            self.si = self.msi
         elif frequency in ['Daily', 'daily', 'D', 'd']:
             self.freq = 'D'
             self.sf = self.dsf
+            self.si = self.dsi
         else:
             raise Exception('CRSP data frequency should by either',
                             'Monthly or Daily')
@@ -168,7 +170,7 @@ class crsp(wrds_module):
         if not file:
             file = self.sf
         key = [self.col_id, self.col_date]
-        if file == self.dsi:
+        if file == self.si:
             key = [self.col_date]
         df = self.open_data(file, key+fields)
         # Construct the object to return
@@ -262,6 +264,48 @@ class crsp(wrds_module):
                                  direction=direction)
         else:
             dfin = dfu.merge(values, how='left', left_on=cols_data, right_on=self.key)
+        dfin.index = dfu.index
+        return(dfin['var'].astype('float32'))
+
+    def _value_for_data_index(self, var, data, ascending, useall):
+        """" Add indexes values to the users data and return the values.
+        Arguments:
+            df --   Internal data containing the values
+                    Columns: [permno, date]
+                    The data is indexed by date and grouped by permno.
+            data -- User data
+                    Columns: [permno, wrds.col_date]
+            nperiods -- Number of periods to compute the variable
+            useall --  If True, use the compounded return of the last
+                        available trading date (if nperiods<0) or the
+                        compounded return of the next available trading day
+                        (if nperiods>0).
+        """
+        var.name = 'var'
+        values = var.reset_index()
+        values = self._correct_columns_types(values)
+        # Open user data
+        cols_data = [self.d.col_date]
+        dfu = self.open_data(data, cols_data)
+        # Prepare the dataframes for merging
+        dfu = dfu.sort_values(self.d.col_date)
+        dfu = dfu.dropna()
+        values = values.sort_values(self.col_date)
+        if useall:
+            # Merge on permno and on closest date
+            # Use the last or next trading day if requested
+            # Shift a maximum of 6 days
+            if ascending:
+                direction = 'backward'
+            else:
+                direction = 'forward'
+            dfin = pd.merge_asof(dfu, values,
+                                 left_on=self.d.col_date,
+                                 right_on=self.col_date,
+                                 tolerance=pd.Timedelta('6 day'),
+                                 direction=direction)
+        else:
+            dfin = dfu.merge(values, how='left', left_on=cols_data, right_on=self.col_date)
         dfin.index = dfu.index
         return(dfin['var'].astype('float32'))
 
@@ -780,3 +824,42 @@ class crsp(wrds_module):
 
         # Return the variable for the user data
         return(self._value_for_data(ncskew, data, ascending, useall))
+
+    ###########
+    # Indexes #
+    ###########
+
+    def compounded_return_index(self, data, nperiods=1, caldays=None, min_periods=None, useall=True, field='vwretd'):
+        r"""
+        Return the compounded daily returns of CRSP index over 'nperiods' periods.
+        If using daily frequency, one period refers to one day.
+        If using monthly frequency, one period refers to on month.
+        Arguments:
+            data -- User data.
+                    Required columns: [permno, 'col_date']
+            nperiods --    Number of periods to use to compute the compounded
+                        returns. If positive, compute the return over
+                        'nperiods' in the future. If negative, compute the
+                        return over abs(nperiods) in the past.
+            useall --  If True, use the compounded return of the last
+                        available trading date (if nperiods<0) or the
+                        compounded return of the next available trading day
+                        (if nperiods>0).
+        """
+        # Get the window and sort
+        window, ascending = self._get_window_sort(nperiods, caldays, min_periods)
+        # Check arguments
+        if nperiods==0:
+            raise Exception("nperiods must be different from 0.")
+        # Open the necessary data
+        key = self.key
+        fields = [field]
+        sf = self._get_fields(fields, file=self.si)
+        # Create the time series index
+        sf = sf.set_index(self.col_date).sort_index(ascending=ascending)
+        # Compute the compounded returns
+        sf['ln1ret'] = np.log(1 + sf[field])
+        sumln = sf.rolling(window, min_periods=min_periods).ln1ret.sum()
+        cret = np.exp(sumln) - 1
+        # Return the variable for the user data
+        return(self._value_for_data_index(cret, data, ascending, useall))

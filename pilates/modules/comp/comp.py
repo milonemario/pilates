@@ -151,6 +151,17 @@ class comp(wrds_module):
         dfin.index = index
         return(dfin[fields])
 
+    def _get_adsprate_fields(self, fields, data):
+        """ Returns fields from COMPUSTAT 'adsprate' file.
+        adsprate file contains S&P debt ratings.
+        """
+        data_key = self.open_data(data, self.key)
+        comp = self.open_data(self.adsprate, self.key+fields).drop_duplicates()
+        # Merge and return the fields
+        dfin = data_key.merge(comp, how='left', on=self.key)
+        dfin.index = data_key.index
+        return(dfin[fields])
+
     def get_fields(self, fields, data=None, lag=0):
         """ Returns fields from COMPUSTAT data.
 
@@ -177,6 +188,7 @@ class comp(wrds_module):
         # Determine the raw and additional fields
         cols_fund = self.get_fields_names(self.fund)
         cols_names = self.get_fields_names(self.names)
+        cols_adsprate = self.get_fields_names(self.adsprate)
         fields = [f for f in fields if f not in key]
         # fields_toc = [f for f in fields if (f not in fund_raw and
         #                                     f not in names_raw)]
@@ -194,12 +206,17 @@ class comp(wrds_module):
                                           f not in fields_add)]
         names_raw = [f for f in fields if (f in cols_names and
                                            f not in fields_add)]
+        adsprate_raw = [f for f in fields if (f in cols_adsprate and
+                                              f not in fields_add)]
         # Get the raw fields for the fund file
         if len(fund_raw) > 0:
             df[fund_raw] = self._get_fund_fields(fund_raw, df)
         # Get the raw fields for the names file
         if len(names_raw) > 0:
             df[names_raw] = self._get_names_fields(names_raw, df)
+        # Get the raw fields for the adsprate file
+        if len(adsprate_raw) > 0:
+            df[adsprate_raw] = self._get_adsprate_fields(adsprate_raw, df)
         # Get the lags if asked for
         if len(fields) > 0 and lag!=0:
             df[fields] = self.get_lag(df, lag)
@@ -283,6 +300,20 @@ class comp(wrds_module):
     #######################
     # Quarterly Variables #
     #######################
+
+    ##### Redefinition of existing fields #####
+    # Main purpose is to fill missing values for instance.
+
+    def _xrdq(self, data):
+        """ Return Expenses in R&D with 0 when missing values (Quarterly). """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['xrdq']
+        df[fields] = self._get_fund_fields(fields, df)  # Need the raw xrdq
+        df.loc[df.xrdq.isna(), 'xrdq'] = 0
+        return(df.xrdq)
+
+    ##### Definition of new variables #####
 
     def _blevq(self, data):
         """ Return Book Leverage (Quarterly). """
@@ -483,18 +514,60 @@ class comp(wrds_module):
         df['roa0q'] = df.niq / df.atq
         return(df.roa0q)
 
-    def _xrdq(self, data):
-        """ Return Expenses in R&D with 0 when missing values (Quarterly). """
-        key = self.key
-        df = self.open_data(data, key)
-        fields = ['xrdq']
-        df[fields] = self._get_fund_fields(fields, df)  # Need the raw xrdq
-        df.loc[df.xrdq.isna(), 'xrdq'] = 0
-        return(df.xrdq)
-
     ####################
     # Yearly Variables #
     ####################
+
+    ##### Redefinition of existing fields #####
+    # Main purpose is to fill missing values for instance.
+
+
+    def _at(self, data):
+        """ Return Total Assets with missing valus when equals 0. """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['at']
+        df[fields] = self._get_fund_fields(fields, df)
+        df.loc[df['at']==0, 'at'] = np.nan
+        return(df['at'])
+
+    def _xrd(self, data):
+        """ Return Expenses in R&D with 0 when missing values. """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['xrd']
+        df[fields] = self._get_fund_fields(fields, df)  # Need the raw xrdq
+        df.loc[df.xrd.isna(), 'xrd'] = 0
+        return(df.xrd)
+
+    def _xsga(self, data):
+        """ Return Expenses in SGA with 0 when missing values. """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['xsga']
+        df[fields] = self._get_fund_fields(fields, df)
+        df.loc[df.xsga.isna(), 'xsga'] = 0
+        return(df.xsga)
+
+    def _tlcf(self, data):
+        """ Return Tax Loss Carry Forward with 0 when missing values. """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['tlcf']
+        df[fields] = self._get_fund_fields(fields, df)
+        df.loc[df.tlcf.isna(), 'tlcf'] = 0
+        return(df.tlcf)
+
+    def _itcb(self, data):
+        """ Return Investment Tax Credit with 0 when missing values. """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['itcb']
+        df[fields] = self._get_fund_fields(fields, df)
+        df.loc[df.itcb.isna(), 'itcb'] = 0
+        return(df.itcb)
+
+    ##### Definition of new variables #####
 
     def _act_lct(self, data):
         """ Return Current Ratio (Yearly). """

@@ -16,6 +16,13 @@ msf:
   index:
     - permno
 
+# Stock-Market Indexes Monthly
+msi:
+  schema: crsp_a_stock
+  table: msi
+  index:
+    - date
+
 # Monthly Stock Events
 mse:
   schema: crsp_a_stock

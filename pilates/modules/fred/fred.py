@@ -16,22 +16,43 @@ class fred(data_module):
     def __init__(self, w):
         data_module.__init__(self, w)
 
-    def get_serie_for_data(self, data, serie, col_date):
-        # Get series information (frequency, etc)
-        df_fred_info = self.fred.get_series_info(serie)
-        freq = df_fred_info['frequency_short']
-        if freq == 'A':
-            tolerance = pd.Timedelta('370 day')
-        elif freq == 'Q':
-            tolerance = pd.Timedelta('100 day')
-        elif freq == 'M':
-            tolerance = pd.Timedelta('40 day')
-        elif freq == 'D':
-            tolerance = pd.Timedelta('2 day')
+    #######################################
+    # Make available some fredapi methods #
+    #######################################
 
-        df_fred = self.fred.get_series(serie)
-        df = pd.DataFrame(df_fred).reset_index()
-        df.columns = ['date_fred', serie]
+    def get_series_info(series):
+        self.fred = Fred(api_key = FRED_API_KEY)
+        return self.fred.get_series_info(series)
+
+    ##########################################
+    # Additional generic methods for pilates #
+    ##########################################
+
+    def get_series_for_data(self, data, series, col_date=None, tolerance=None):
+        if col_date is None:
+            # Use the date set at the library level
+            col_date = self.d.col_date
+        if tolerance is None:
+            # Series is given as a name
+            fred_series = self.fred.get_series(series)
+            # Get series information (frequency, etc)
+            df_fred_info = self.fred.get_series_info(series)
+            freq = df_fred_info['frequency_short']
+            if freq == 'A':
+                tolerance = pd.Timedelta('370 day')
+            elif freq == 'Q':
+                tolerance = pd.Timedelta('100 day')
+            elif freq == 'M':
+                tolerance = pd.Timedelta('40 day')
+            elif freq == 'D':
+                tolerance = pd.Timedelta('2 day')
+        else:
+            # Series is given as data
+            fred_series = series
+            series = 'series_name'
+
+        df = pd.DataFrame(fred_series).reset_index()
+        df.columns = ['date_fred', series]
         # Prepare the user data
         data[col_date] = pd.to_datetime(data[col_date])
         # Find nearest dates
@@ -41,20 +62,24 @@ class fred(data_module):
                              direction='nearest',
                              tolerance=tolerance)
         dfin.index = data.index
-        return dfin[serie].astype('float32')
+        return dfin[series].astype('float32')
 
-    def get_series(self, data, series, col_date=None):
+    def get_series(self, series, data=None, col_date=None):
         """ Return the FRED series to be added to the user data.
         """
         # Connection to FRED (connect just before downloading series
         # to avoid Error 504: Gateway Time-out)
         self.fred = Fred(api_key = FRED_API_KEY)
-        if not col_date:
+        if data is None:
+            return self.fred.get_series(series)
+        if col_date is None:
+            # Use the date set at the library level
             col_date = self.d.col_date
         dfin = data[[col_date]]
-        for serie in series:
-            dfin[serie] = self.get_serie_for_data(dfin, serie, col_date)
+        for s in series:
+            dfin[s] = self.get_series_for_data(dfin, s, col_date)
         return dfin[series]
+
 
     # Depreciated
     def __get_10y_US_rates(self, data, col_date=None):
