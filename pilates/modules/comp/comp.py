@@ -46,6 +46,10 @@ class comp(wrds_module):
         self.consol = ['C']
         self.popsrc = ['D']
 
+    def set_date_column(self, col_date):
+        self.col_date = col_date
+        self.key = [self.col_id, self.col_date]
+
     def set_frequency(self, frequency):
         """ Define the frequency to use for the Compustat data.
         The corresponding Compustat data 'fund' file (funda or fundq)
@@ -613,6 +617,7 @@ class comp(wrds_module):
         fields = ['dltt', 'dlc', 'eq']
         df[fields] = self.get_fields(fields, data)
         df['flev'] = (df.dltt + df.dlc) / df['eq']
+        df.loc[df['eq']==0, 'flev'] = np.nan
         return(df.flev)
 
     def _mb(self, data):
@@ -621,8 +626,9 @@ class comp(wrds_module):
         df = self.open_data(data, key)
         fields = ['eq', 'ceq']
         df[fields] = self.get_fields(fields, data)
-        df['m_b'] = df['eq'] / df.ceq
-        return(df.m_b)
+        df['mb'] = df['eq'] / df.ceq
+        df.loc[df.ceq==0, 'mb'] = np.nan
+        return(df.mb)
 
     def _noacc(self, data):
         """ Non-operating accruals
@@ -645,7 +651,7 @@ class comp(wrds_module):
     def _oacc(self, data):
         """ Operating Accruals
 
-        Operating accruals are chages in non-cash assets (act-che)
+        Operating accruals are changes in non-cash assets (act-che)
         minus changes in current liabilities (lct-dlc) exluding short-term debt.
 
         """
@@ -679,6 +685,7 @@ class comp(wrds_module):
         fields = ['ib', 'at']
         df[fields] = self.get_fields(fields, data)
         df['roa'] = df.ib / df['at']
+        df.loc[df['at']==0, 'roa'] = np.nan
         return(df.roa)
 
     def _technology(self, data):

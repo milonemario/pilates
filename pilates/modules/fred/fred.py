@@ -7,6 +7,7 @@ https://fred.stlouisfed.org/
 
 from pilates import data_module
 import pandas as pd
+import numpy as np
 from fredapi import Fred
 
 FRED_API_KEY = '69e42ccbb7fa5da6cc743e564d08be62'
@@ -58,6 +59,7 @@ class fred(data_module):
         # Find nearest dates
         data = data.sort_values(col_date)
         df = df.sort_values('date_fred')
+        data = data[np.isfinite(data[col_date])]
         dfin = pd.merge_asof(data[col_date], df, left_on=col_date, right_on='date_fred',
                              direction='nearest',
                              tolerance=tolerance)

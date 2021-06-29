@@ -94,7 +94,7 @@ class crsp(wrds_module):
             print("Warning: The merged permno",
                   "contains {:} duplicates".format(n_dup))
         # Add the permno to the user's data
-        dfu = self.open_data(data, key)
+        dfu = self.open_data(data, key).dropna()
         dfin = dfu.merge(dmf, how='left', on=key)
         dfin.index = dfu.index
         return(dfin.permno)
