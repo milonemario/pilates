@@ -1,0 +1,30 @@
+#########################
+# Files for Datastream #
+#########################
+
+
+# WRDS Tables
+
+
+# Worldscope tables from WS direct database
+
+DS2EquityIndex:
+  table: DS2EquityIndex
+
+DS2Exchange:
+  table: DS2Exchange
+
+DS2PrimQtRI:
+  table: DS2PrimQtRI
+
+DS2XRef:
+  table: DS2XRef
+
+SDDates_v:
+  table: SDDates_v
+
+SDExchInfo_v:
+  table: SDExchInfo_v
+
+SDInfo_v:
+  table: SDInfo_v

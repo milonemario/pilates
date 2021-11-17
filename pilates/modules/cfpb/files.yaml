@@ -1,0 +1,92 @@
+##################
+# Files for CFPB #
+##################
+
+## Complaints data
+complaints:
+  url: https://files.consumerfinance.gov/ccdb/complaints.csv.zip
+  file: complaints.csv
+  type: csv
+
+## HMDA data
+# HMDA data comes by year
+hmda_2007:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2007_nationwide_all-records_codes.zip
+  file: hmda_2007_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2008:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2008_nationwide_all-records_codes.zip
+  file: hmda_2008_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2009:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2009_nationwide_all-records_codes.zip
+  file: hmda_2009_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2010:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2010_nationwide_all-records_codes.zip
+  file: hmda_2010_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2011:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2011_nationwide_all-records_codes.zip
+  file: hmda_2011_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2012:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2012_nationwide_all-records_codes.zip
+  file: hmda_2012_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2013:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2013_nationwide_all-records_codes.zip
+  file: hmda_2013_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2014:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2014_nationwide_all-records_codes.zip
+  file: hmda_2014_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2015:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2015_nationwide_all-records_codes.zip
+  file: hmda_2015_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2016:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2016_nationwide_all-records_codes.zip
+  file: hmda_2016_nationwide_all-records_codes.csv
+  type: csv
+
+hmda_2017:
+  url: https://files.consumerfinance.gov/hmda-historic-loan-data/hmda_2017_nationwide_all-records_codes.zip
+  file: hmda_2017_nationwide_all-records_codes.csv
+  type: csv
+
+# lar_2017:
+#   url: https://s3.amazonaws.com/cfpb-hmda-public/prod/dynamic-data/dynamic_lar_ultimate_2017.txt
+#   file: dynamic_lar_ultimate_2017.txt
+#   type: csv
+#   delimiter: '|'
+#   cols:
+#   # Somehow need to provide the columns for this file
+
+lar_2018:
+  url: https://s3.amazonaws.com/cfpb-hmda-public/prod/dynamic-data/2018/2018_lar.zip
+  file: 2018_lar.txt
+  type: csv
+  delimiter: '|'
+
+lar_2019:
+  url: https://s3.amazonaws.com/cfpb-hmda-public/prod/dynamic-data/2019/2019_lar.zip
+  file: 2019_lar.txt
+  type: csv
+  delimiter: '|'
+
+lar_2020:
+  url: https://s3.amazonaws.com/cfpb-hmda-public/prod/dynamic-data/2020/2020_lar.zip
+  file: 2020_lar.txt
+  type: csv
+  delimiter: '|'

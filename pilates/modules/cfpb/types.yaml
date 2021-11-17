@@ -1,0 +1,43 @@
+#########################
+# Column types for CFPB #
+#########################
+
+Int8:
+  # HMDA pre-2018
+  # HMDA post-2018 (LAR schema)
+
+Int32:
+  # Complaints
+  - complaint_id
+  # HMDA pre-2018
+  # HMDA post-2018 (LAR schema)
+
+string:
+  # Complaints
+  - product
+  - sub_product
+  - issue
+  - sub_issue
+  - consumer_complaint_narrative
+  - company_public_response
+  - company
+  - state
+  - zip_code
+  - tags
+  - consumer_consent_provided
+  - submitted_via
+  - company_response_to_consumer
+  - timely_response
+  - consumer_disputed
+  # HMDA pre-2018
+  # HMDA post-2018 (LAR schema)
+
+date:
+  # Complaints
+  - date_received
+  - date_sent_to_company
+
+float32:
+  # Complaints
+  # HMDA pre-2018
+  # HMDA post-2018 (LAR schema)

@@ -1,0 +1,86 @@
+####################################
+# Column types for Datastream data #
+####################################
+
+# Notes
+# Field 'code' is not specified because it appears
+# in different tables with different type (str or int)
+# Let pandas takes care of that.
+
+# Pandas Nullable Int32 type
+Int32:
+  #### DS database tables ####
+  # DS2EquityIndex
+  - dsindexcode
+  - regcodetypeid
+  - sourcecode
+  - indexlistcode
+  - isocurrcode
+  - licflag
+  # DS2Exchange
+  - exchintcode
+  - ctrycodetype
+  # DS2PrimQtRI
+  - infocode
+  # DS2XRef
+  - type_
+  # SDDates_v
+  - exchcode
+  # SDExchInfo_v
+  # SDInfo_v
+
+
+string:
+  #### DS database tables ####
+  # DS2EquityIndex
+  - dsindexmnem
+  - region
+  - indexdesc
+  - ldb
+  - islocalcurrency
+  - indexstatuscode
+  # DS2Exchange
+  - dsexchcode
+  - exchtype
+  - exchname
+  - exchmnem
+  - exchctrycode
+  # DS2PrimQtRI
+  # DS2XRef
+  - desc_
+  # SDDates_v
+  # SDExchInfo_v
+  - exchabbr
+  - cntryname
+  - isoccy
+  - isoctry
+  - holtype
+  - define1
+  - define2
+  # SDInfo_v
+  - name
+
+
+date:
+  #### DS database tables ####
+  # DS2EquityIndex
+  - basedate
+  # DS2Exchange
+  # DS2PrimQtRI
+  - marketdate
+  # DS2XRef
+  # SDDates_v
+  - date_
+  # SDExchInfo_v
+  # SDInfo_v
+
+float32:
+  #### DS database tables ####
+  # DS2EquityIndex
+  # DS2Exchange
+  # DS2PrimQtRI
+  - ri
+  # DS2XRef
+  # SDDates_v
+  # SDExchInfo_v
+  # SDInfo_v

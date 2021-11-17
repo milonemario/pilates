@@ -300,6 +300,7 @@ class data:
             return(data[fields])
         else:
             return(data)
+
 #############################
 # General class for modules #
 #############################
@@ -413,7 +414,11 @@ class data_module:
         # pqschema = None
         for i, df in enumerate(f):
             df = self._process_fields(df)
+            # Clean columns names
             df.columns = map(str.lower, df.columns)  # Lower case col names
+            df.columns = df.columns.str.replace(' ', '_', regex=False)
+            df.columns = df.columns.str.replace('-', '_', regex=False)
+            df.columns = df.columns.str.replace('?', '', regex=False)
             df = self._correct_columns_types(df)
             nobs = (i+1)*f.chunksize
             print("Progress conversion : {:2.0%}".format(nobs/float(nrows)), end='\r')
@@ -430,7 +435,7 @@ class data_module:
         print('\r')
         pqwriter.close()
 
-    def _convert_data(self, name, path, force=False, delim_whitespace=False, nrows=None):
+    def _convert_data(self, name, path, force=False, delimiter=None, delim_whitespace=False, nrows=None):
         """ Convert the file to parquet and save it in the
         data directory.
 
@@ -470,10 +475,12 @@ class data_module:
                 self._convert_data_by_chunks(f, filepath_pq, nrows)
             elif ext in ['.csv', '.asc']:
                 f = pd.read_csv(path, chunksize=self.d.chunksize,
+                                delimiter=delimiter,
                                 delim_whitespace=delim_whitespace)
                 # Get the total number of rows
                 # Need to open the file (only one column)
                 f_tmp = pd.read_csv(path, usecols=[0],
+                                    delimiter=delimiter,
                                     delim_whitespace=delim_whitespace)
                 nrows = f_tmp.shape[0]
                 del(f_tmp)
@@ -515,7 +522,7 @@ class data_module:
                                     df[c].str.decode('utf-8', errors='ignore'))
         return df
 
-    def _open_local_data(self, name, columns=None):
+    def _open_local_data(self, name, columns=None, filters=None):
         """ Open the data.
         Only return data from locally stored files.
 
@@ -526,8 +533,8 @@ class data_module:
                 convert_data().
             columns (list, optional): Columns to keep. If None, returns all
                 the columns. Defaults to None.
-            types (str, optional): Path of the Yaml file containing the fields
-                types of the data.
+            filters (list, optional): Filters to apply when opening the data.
+                See pandas.read_parquet()
 
         Returns:
             pandas.DataFrame: DataFrame with the required columns.
@@ -539,9 +546,7 @@ class data_module:
         else:
             self.d._check_data_dir()
             filepath_pq = self._filepath_pq(name)
-            t = pq.read_table(filepath_pq, columns=columns)
-            df = t.to_pandas()
-            del(t)
+            df = pd.read_parquet(filepath_pq, columns=columns, filters=filters)
         return df
 
     def _get_local_fields_names(self, name):
@@ -580,11 +585,12 @@ class data_module:
             types_list1 = {}  # Convert to float before Int64
             types_list2 = {}
             for k, l in self.types.items():
-                for v in l:
-                    types_list1[v] = k
-                    types_list2[v] = k
-                    if k in ['Int64', 'Int32']:
-                        types_list1[v] = 'float'
+                if l is not None:
+                    for v in l:
+                        types_list1[v] = k
+                        types_list2[v] = k
+                        if k in ['Int64', 'Int32']:
+                            types_list1[v] = 'float'
             # Select the common columns
             cols_df = df.columns
             cols_change = [v for v in cols_df if v in types_list2.keys()]
@@ -601,14 +607,12 @@ class data_module:
             if len(chnd) > 0:
                 for k in chnd.keys():
                     # If the current type is object while it should be numeric,
-                    # remove possible unwanted characters (' and ")
-                    if df[k].dtype=='object' and chnd[k]=='float':
-                        for char in ['"', "'", " "]:
+                    # remove possible unwanted characters (', ", comma, space)
+                    if df[k].dtype=='object' and chnd[k] in ['float', 'float32']:
+                        for char in ['"', "'", " ", ","]:
                             df[k] = df[k].str.replace(char, "")
                     # Convert the field
                     try:
-                        #if k=='cik':
-                        #    import ipdb; ipdb.set_trace();
                         df.loc[:, k] = df[k].astype(chnd[k], errors='ignore')
                     except:
                         import ipdb; ipdb.set_trace();
@@ -626,6 +630,27 @@ class data_module:
             for ch in changes:
                 apply_changes(ch)
         return(df)
+
+    #########################################
+    # Helper functions for data processiong #
+    #########################################
+
+    def _get_window_sort(self, nperiods, caldays, min_periods):
+        """ Define a pandas window.
+        Used for computing rolling compounded returns or volatility
+        """
+        # Define the window and how the data should be sorted
+        if caldays is None:
+            window = abs(nperiods)
+            ascending = (nperiods < 0)
+        else:
+            window = str(abs(caldays)) + "D"
+            ascending = (caldays < 0)
+            if min_periods is None:
+                print("Warning: It is advised to provide a minimum number of observations "
+                      "to compute aggregate values when using the 'caldays' arguments. "
+                      "No doing so will result in small rolling windows.")
+        return window, ascending
 
     ##################
     # User functions #
@@ -656,7 +681,7 @@ class data_module:
             with zipfile.ZipFile(download_path, 'r') as zip_ref:
                 zip_ref.extractall(self.d.datadownload)
 
-    def add_file(self, name, path=None, force=False, delim_whitespace=False, nrows=None):
+    def add_file(self, name, path=None, force=False, delimiter=None, delim_whitespace=False, nrows=None):
         # Note: delim_whitespace for CSV files, nrows for Excel files
         """ Add a file to the module.
         Converts and make the file available for the module to use.
@@ -680,6 +705,8 @@ class data_module:
                 if not os.path.exists(path):
                     self.download_file(name)
                 # Set arguments for file conversion
+                if 'delimiter' in self.files[name].keys():
+                    delimiter = self.files[name]['delimiter']
                 if 'delim_whitespace' in self.files[name].keys():
                     delim_whitespace = self.files[name]['delim_whitespace']
                 if 'nrows' in self.files[name].keys():
@@ -689,12 +716,13 @@ class data_module:
                                 'and no file path is provided.')
             # Convert the file
             f = self._convert_data(name, path, force=force,
+                                    delimiter=delimiter,
                                     delim_whitespace=delim_whitespace,
                                     nrows=nrows)
             # Add the file to the module
             setattr(self, name, name)
 
-    def open_data(self, name, columns=None):
+    def open_data(self, name, columns=None, filters=None):
         """ Open the data.
         If the module is set to use remote files, update local files accordingly.
         Otherwise, use local files.
@@ -706,8 +734,8 @@ class data_module:
                 convert_data().
             columns (list, optional): Columns to keep. If None, returns all
                 the columns. Defaults to None.
-            types (str, optional): Path of the Yaml file containing the fields
-                types of the data.
+            filters (list, optional): Filters to apply when opening the data.
+                See pandas.read_parquet()
 
         Returns:
             pandas.DataFrame: DataFrame with the required columns.
@@ -733,7 +761,7 @@ class data_module:
             if len(missing_fields) > 0:
                 self._add_fields_to_file(name, missing_fields)
         # The file on disk should be good to use now.
-        return self._open_local_data(name, columns)
+        return self._open_local_data(name, columns, filters)
 
     def get_fields_names(self, name):
         """ Get the fields names of the file.
@@ -752,7 +780,7 @@ class data_module:
         if self.remote_access:
             return self._get_remote_fields_names(name)
         else:
-            return self.d._get_local_fields_names(name)
+            return self._get_local_fields_names(name)
 
     def get_lag(self, data, lag, fields=None, col_id=None, col_date=None):
         """ Return the lag of the columns in the data (or the fields if

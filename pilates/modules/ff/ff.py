@@ -1,10 +1,5 @@
 """
-Module to provide processing functions for Fam-French data.
-
-JLN data refers to the Economic Uncertainty data from
-Jurado, Ludvigson and Ng (2015).
-https://www.sydneyludvigson.com/macro-and-financial-uncertainty-indexes
-
+Module to provide processing functions for Fama-French data.
 """
 
 import os, re

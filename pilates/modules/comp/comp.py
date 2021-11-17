@@ -234,6 +234,37 @@ class comp(wrds_module):
             # Return the entire dataset with keys
             return(df[key+fields])
 
+    def get_closest_datadates(self, data, date_col, tolerance=None, direction='nearest'):
+        """ Returns the closest datadate for the companies
+        present in data using the date_col columns as date.
+        """
+        dff = self.get_fields(['gvkey', 'datadate'])
+
+        dfu = data[['gvkey', date_col]]
+        index = dfu.index
+        dfu.gvkey = dfu.gvkey.astype('Int32')
+
+        dfus = dfu.drop_duplicates().sort_values(date_col)
+        dffs = dff.sort_values('datadate')
+
+        if tolerance is None:
+            if self.freq=='Q':
+                tolerance = pd.Timedelta('93 day')
+            elif self.freq=='A':
+                tolerance = pd.Timedelta('365 day')
+
+        dfin = pd.merge_asof(dfus, dffs,
+                             left_on=date_col,
+                             right_on='datadate',
+                             by=self.col_id,
+                             tolerance=tolerance,
+                             direction=direction)
+
+        dfum = dfu.merge(dfin, on=['gvkey', date_col], how='left')
+        dfum.index = index
+        return(dfum.datadate)
+
+
     ###################
     # General Methods #
     ###################
@@ -400,6 +431,16 @@ class comp(wrds_module):
         df['eqq'] = df.prccq * df.cshoq
         return(df.eqq)
 
+    def _flevq(self, data):
+        """ Financial Leverage (Quarterly). """
+        key = self.key
+        df = self.open_data(data, key)
+        fields = ['dlttq', 'dlcq', 'eqq']
+        df[fields] = self.get_fields(fields, data)
+        df['flevq'] = (df.dlttq + df.dlcq) / df['eqq']
+        df.loc[df['eqq']==0, 'flevq'] = np.nan
+        return(df.flevq)
+
     def _hhiq(self, data):
         """ Return Herfindahl-Hirschman Index (Quarterly). """
         key = self.key
@@ -460,15 +501,17 @@ class comp(wrds_module):
         fields = ['eqq', 'ceqq']
         df[fields] = self.get_fields(fields, data)
         df['mb0q'] = df.eqq / df.ceqq
+        df.loc[df.ceqq==0, 'mb0q'] = np.nan
         return(df.mb0q)
 
     def _mb1q(self, data):
-        """ Return Market-to-Book ratio 0 (Quarterly). """
+        """ Return Market-to-Book ratio 1 (Quarterly). """
         key = self.key
         df = self.open_data(data, key)
         fields = ['eqq', 'ltq', 'atq']
         df[fields] = self.get_fields(fields, data)
         df['mb1q'] = (df.eqq + df.ltq) / df.atq
+        df.loc[df.atq==0, 'mb1q'] = np.nan
         return(df.mb1q)
 
     def _mroq(self, data):
@@ -583,7 +626,7 @@ class comp(wrds_module):
         return(df.act_lct)
 
     def _cfo(self, data):
-        """ Cash flow from operations
+        """ Cash flow from operations (Yearly)
         Equals oancf if fyear>=1987 and fopt - oacc if fyear<1987
         """
         key = self.key

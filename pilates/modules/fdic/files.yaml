@@ -1,0 +1,25 @@
+##################
+# Files for FDIC #
+##################
+
+# Institutions
+institutions_definitions:
+  url: https://www7.fdic.gov/idasp/content/Institutions2.zip
+  file: INSTITUTIONS2_DEFINITIONS.CSV
+  type: csv
+
+institutions:
+  url: https://www7.fdic.gov/idasp/content/Institutions2.zip
+  file: INSTITUTIONS2.CSV
+  type: csv
+
+# Offices
+offices_definitions:
+  url: https://www7.fdic.gov/idasp/content/Offices2.zip
+  file: OFFICES2_DEFINITIONS.CSV
+  type: csv
+
+offices:
+  url: https://www7.fdic.gov/idasp/content/Offices2.zip
+  file: OFFICES2_ALL.CSV
+  type: csv

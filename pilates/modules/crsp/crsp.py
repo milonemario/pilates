@@ -202,19 +202,19 @@ class crsp(wrds_module):
         dfu[fields] = self._get_fields(fields, dfu, self.dsf)
         return(dfu[fields])
 
-    def _get_window_sort(self, nperiods, caldays, min_periods):
-        # Define the window and how the data should be sorted
-        if caldays is None:
-            window = abs(nperiods)
-            ascending = (nperiods < 0)
-        else:
-            window = str(abs(caldays)) + "D"
-            ascending = (caldays < 0)
-            if min_periods is None:
-                print("Warning: It is advised to provide a minimum number of observations "
-                      "to compute aggregate values when using the 'caldays' arguments. "
-                      "No doing so will result in small rolling windows.")
-        return window, ascending
+    # def _get_window_sort(self, nperiods, caldays, min_periods):
+    #     # Define the window and how the data should be sorted
+    #     if caldays is None:
+    #         window = abs(nperiods)
+    #         ascending = (nperiods < 0)
+    #     else:
+    #         window = str(abs(caldays)) + "D"
+    #         ascending = (caldays < 0)
+    #         if min_periods is None:
+    #             print("Warning: It is advised to provide a minimum number of observations "
+    #                   "to compute aggregate values when using the 'caldays' arguments. "
+    #                   "No doing so will result in small rolling windows.")
+    #     return window, ascending
 
     def _value_for_data(self, var, data, ascending, useall):
         """" Add values to the users data and return the values.
@@ -336,7 +336,8 @@ class crsp(wrds_module):
         dfin.index = dfu.index
         return(dfin.tso)
 
-    def compounded_return(self, data, nperiods=1, caldays=None, min_periods=None, useall=True):
+    def compounded_return(self, data, nperiods=1, caldays=None, min_periods=None,
+                          logreturn=False, useall=True):
         r"""
         Return the compounded daily returns over 'nperiods' periods.
         If using daily frequency, one period refers to one day.
@@ -367,7 +368,10 @@ class crsp(wrds_module):
         # Compute the compounded returns
         sf['ln1ret'] = np.log(1 + sf.ret)
         sumln = sf.groupby(self.col_id).rolling(window, min_periods=min_periods).ln1ret.sum()
-        cret = np.exp(sumln) - 1
+        if logreturn:
+            cret = sumln
+        else:
+            cret = np.exp(sumln) - 1
         # Return the variable for the user data
         return(self._value_for_data(cret, data, ascending, useall))
 

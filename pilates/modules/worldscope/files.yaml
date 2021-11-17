@@ -1,0 +1,159 @@
+#########################
+# Files for Worldscope  #
+#########################
+
+
+# WRDS Tables
+
+wrds_ws_company:
+  schema: tr_worldscope
+  table: wrds_ws_company
+  index:
+    - code
+
+wrds_ws_funda:
+  schema: tr_worldscope
+  table: wrds_ws_funda
+  index:
+    - code
+
+wrds_ws_fundq:
+  schema: tr_worldscope
+  table: wrds_ws_fundq
+  index:
+    - code
+
+wrds_ws_ids:
+  schema: tr_worldscope
+  table: wrds_ws_ids
+  index:
+    - code
+
+wrds_ws_pension:
+  schema: tr_worldscope
+  table: wrds_ws_pension
+  index:
+    - code
+
+wrds_ws_segments:
+  schema: tr_worldscope
+  table: wrds_ws_segments
+  index:
+    - code
+
+wrds_ws_stock:
+  schema: tr_worldscope
+  table: wrds_ws_stock
+  index:
+    - code
+
+wrds_ws_stock_header:
+  schema: tr_worldscope
+  table: wrds_ws_stock_header
+  index:
+    - code
+
+
+# Worldscope Tables
+
+wscode:
+  schema: tr_worldscope
+  table: wscode
+  index:
+    - section_
+    - field
+    - value_
+
+wscurr:
+  schema: tr_worldscope
+  table: wscurr
+  index:
+    - natcode
+
+wsddata:
+  schema: tr_worldscope
+  table: wsddata
+  index:
+    - code
+    - item
+
+wsfnote:
+  schema: tr_worldscope
+  table: wsfnote
+  index:
+    - code
+    - item
+
+wsftext:
+  schema: tr_worldscope
+  table: wsftext
+  index:
+    - code
+    - item
+
+wsfye:
+  schema: tr_worldscope
+  table: wsfye
+  index:
+    - code
+
+wsidata:
+  schema: tr_worldscope
+  table: wsidata
+  index:
+    - code
+    - item
+
+wsinfo:
+  schema: tr_worldscope
+  table: wsinfo
+  index:
+    - wsid
+
+wsitem:
+  schema: tr_worldscope
+  table: wsitem
+  index:
+    - number
+
+wsldata:
+  schema: tr_worldscope
+  table: wsldata
+  index:
+    - code
+    - item
+
+wsmdata:
+  schema: tr_worldscope
+  table: wsmdata
+  index:
+    - code
+    - item
+
+wsndata:
+  schema: tr_worldscope
+  table: wsmdata
+  index:
+    - code
+    - item
+
+wssdata:
+  schema: tr_worldscope
+  table: wssdata
+  index:
+    - code
+    - item
+
+wstext:
+  schema: tr_worldscope
+  table: wstext
+  index:
+    - section_
+    - field
+
+wsxdata:
+  schema: tr_worldscope
+  table: wsxdata
+  index:
+    - code
+    - item
