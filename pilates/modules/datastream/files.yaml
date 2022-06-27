@@ -14,8 +14,14 @@ DS2EquityIndex:
 DS2Exchange:
   table: DS2Exchange
 
+DS2IndexData:
+  table: DS2IndexData
+
 DS2PrimQtRI:
   table: DS2PrimQtRI
+
+DS2MktVal:
+  table: DS2MktVal
 
 DS2XRef:
   table: DS2XRef

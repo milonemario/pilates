@@ -33,9 +33,9 @@ class datastream(wrds_module):
         sdd = self.open_data(self.SDDates_v)
         sdi = self.open_data(self.SDInfo_v)
         xref = self.open_data(self.DS2XRef)
-        xref = xref[xref.type_==1017]   # Trading Holiday Mapping
-        xref.desc_ = xref.desc_.astype('Int32') # Corresponds to exchcode
-        xref.code = xref.code.astype(int).astype('Int32') # Corresponds to exchintcode
+        xref = xref[xref.type_ == 1017]   # Trading Holiday Mapping
+        xref.desc_ = xref.desc_.astype('Int32')  # Corresponds to exchcode
+        xref.code = xref.code.astype(int).astype('Int32')  # Corresponds to exchintcode
         exch = self.open_data(self.DS2Exchange, columns=['exchintcode'])
         # Merge
         df = sdif.merge(sdd)
@@ -147,7 +147,8 @@ class datastream(wrds_module):
         sf.drop('last_date', axis=1, inplace=True)
 
         # Compute the compounded returns
-        sf['ln1ret'] = np.log(1 + sf.ret)
+        with np.errstate(divide='ignore'):
+            sf['ln1ret'] = np.log(1 + sf.ret)
         if window!=1:
             sf.set_index(self.col_date, inplace=True)
             sf.sort_index(inplace=True)
@@ -164,9 +165,9 @@ class datastream(wrds_module):
 
     def compounded_return(self, data, nperiods=1, caldays=None, min_periods=None,
                           logreturn=False, useall=True, tolerance=pd.Timedelta('6 day'),
-                          parallel=True):
+                          chunk_max_ids=None, verbose=False, parallel=False):
         """ Compute compounded returns
-        Use approach dexcribed in
+        Use approach described in
         "Research Guide for Datastream and Worldscope at Wharton Research Data Services"
         by Rui Dai and Qingyi (Freda) Drechsler
         """
@@ -183,18 +184,57 @@ class datastream(wrds_module):
         # Use only the necessary columns from user data
         dfu = data[[self.col_id, self.d.col_date]]
 
-        if parallel:
-            # Parallel processing at the firm level
-            ret_id = partial(self._compounded_return_for_id, hol=hol, data=data, window=window,
-                             min_periods=min_periods, logreturn=logreturn, ascending=ascending,
-                             useall=useall, tolerance=tolerance)
-            pool = mp.Pool(mp.cpu_count())
-            res = pool.map_async(ret_id, ids)
-            res = res.get()
-            res_all = pd.concat(res)
-        else:
-            res_all = self._compounded_return_for_id(ids, hol, data, window, min_periods,
+        if chunk_max_ids is None:
+            res_all = self._compounded_return_for_id(ids, hol, dfu, window, min_periods,
                                                      logreturn, ascending, useall, tolerance)
+        else:
+            # Process the data by chunk_max_ids ids at a time
+            # Split ids by chunks
+            chunks_ids = [ids[i:i+chunk_max_ids] for i in range(0,len(ids), chunk_max_ids)]
+            if parallel:
+                fn = partial(self._compounded_return_for_id, hol=hol, data=dfu,
+                             window=window, min_periods=min_periods, logreturn=logreturn,
+                             ascending=ascending, useall=useall, tolerance=tolerance)
+                pool = mp.Pool()
+                res_chunks = pool.map(fn, chunks_ids)
+                res_all = pd.concat(res_chunks)
+            else:
+                res_all = pd.DataFrame()
+                i = 1
+                n = len(chunks_ids)
+                for chunk_ids in chunks_ids:
+                    if verbose:
+                        print('Chunk '+str(i)+' / '+str(n), end='\r')
+                        i += 1
+                    res_chunk = self._compounded_return_for_id(chunk_ids, hol, dfu, window, min_periods,
+                                                             logreturn, ascending, useall, tolerance)
+                    res_all = pd.concat([res_all, res_chunk])
 
         # Return the variable for the user data
         return(res_all)
+
+    def return_index(self, data, nations, sics):
+        """ Return the average daily returns for the given data
+        for the subset of firms defined by nations and sics.
+
+        arguments:
+            data        User data that includes at least a daily date column
+            nations     List of nations to include
+            sics        List of sic codes to include (how about sic2d vs sic4d?)
+
+        """
+        None
+
+    def market_value(self, data):
+        """ Fetch market values
+        """
+        # Use only the necessary columns from user data
+        dfu = data[[self.col_id, self.d.col_date]]
+        # Open the market value file
+        dmv = self.open_data(self.DS2MktVal)
+        # Merge to the user data
+        dfin = dfu.merge(dmv, how='left',
+                         left_on=[self.col_id, self.d.col_date],
+                         right_on=[self.col_id, 'valdate'])
+        dfin.index = dfu.index
+        return dfin.consolmktval

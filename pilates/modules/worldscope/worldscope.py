@@ -49,7 +49,7 @@ class worldscope(wrds_module):
         """
         # 1-1 mapping between WS code and DS infocode
         code = self._get_company_fields(['code'], data)
-        return(code.astype('Int32'))
+        return(code.code)
 
     def _get_fund_fields(self, fields, data, lag=0):
         """ Returns fields from Worldscope 'fund' file.

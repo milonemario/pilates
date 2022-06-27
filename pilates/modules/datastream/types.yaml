@@ -20,8 +20,11 @@ Int32:
   # DS2Exchange
   - exchintcode
   - ctrycodetype
+  # DS2IndexData
   # DS2PrimQtRI
   - infocode
+  # DS2MktVal
+  - consolnumshrs
   # DS2XRef
   - type_
   # SDDates_v
@@ -45,7 +48,9 @@ string:
   - exchname
   - exchmnem
   - exchctrycode
+  # DS2IndexData
   # DS2PrimQtRI
+  # DS2MktVal
   # DS2XRef
   - desc_
   # SDDates_v
@@ -66,8 +71,12 @@ date:
   # DS2EquityIndex
   - basedate
   # DS2Exchange
+  # DS2IndexData
+  - valuedate
   # DS2PrimQtRI
   - marketdate
+  # DS2MktVal
+  - valdate
   # DS2XRef
   # SDDates_v
   - date_
@@ -78,8 +87,13 @@ float32:
   #### DS database tables ####
   # DS2EquityIndex
   # DS2Exchange
-  # DS2PrimQtRI
+  # DS2IndexData
+  - pi_
   - ri
+  - mv
+  # DS2PrimQtRI
+  # DS2MktVal
+  - consolmktval
   # DS2XRef
   # SDDates_v
   # SDExchInfo_v

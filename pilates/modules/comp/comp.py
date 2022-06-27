@@ -264,7 +264,6 @@ class comp(wrds_module):
         dfum.index = index
         return(dfum.datadate)
 
-
     ###################
     # General Methods #
     ###################

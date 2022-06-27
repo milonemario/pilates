@@ -28,10 +28,9 @@ python manager (conda for instance) prior to installing pilates:
 - wget
 - xlrd
 - openpyxl
-
-Pilates also depends on:
 - rapidfuzz
 - fredapi
+- country_converter
 
 
 

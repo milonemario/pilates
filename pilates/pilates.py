@@ -39,6 +39,7 @@ WRDS_POSTGRES_DB = 'wrds'
 # Global functions #
 ####################
 
+
 def check_duplicates(df, key, description=''):
     """ Check duplicates and print a message if needed.
 
@@ -52,6 +53,7 @@ def check_duplicates(df, key, description=''):
     if n_dup > 0:
         print("Warning: The data {:} contains {:} \
               duplicates".format(description, n_dup))
+
 
 def __correct_columns_types(df, types=None):
     """ Apply the correct data type to all known columns.
@@ -118,6 +120,7 @@ def __correct_columns_types(df, types=None):
 ##############
 # Main Class #
 ##############
+
 
 class data:
     """ Main class of pilates.
@@ -301,9 +304,11 @@ class data:
         else:
             return(data)
 
+
 #############################
 # General class for modules #
 #############################
+
 
 class data_module:
     """ Class inherited by all the modules used to process the data.
@@ -802,9 +807,11 @@ class data_module:
                               col_id = self.col_id,
                               col_date = self.col_date))
 
+
 ##########################
 # Class for WRDS modules #
 ##########################
+
 
 class wrds_module(data_module):
     """ Module class for all modules that use WRDS data.

@@ -1,0 +1,20 @@
+#############################
+# Files for Audit Analytics #
+#############################
+
+# Provide information on each tables.
+# The index is particularly important as it specifies the sorting of the table
+# It has to match (columns and order) an existing index to provide maximum
+# performances. For this reason, we use schemas with actual tables instead
+# of views.
+# When no index exists on a table, use a combination of columns that appear
+# to be as close as possible to a primary key. Note that the index if there is
+# one does not need to be on a primary key (WRDS tables usually do not have
+# primary keys).
+
+# Restatements
+auditnonreli:
+  schema: audit_audit_comp
+  table: auditnonreli
+  index:
+    - file_date
