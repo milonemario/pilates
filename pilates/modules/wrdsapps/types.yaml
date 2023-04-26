@@ -1,0 +1,31 @@
+####################################
+# Column types for Worldscope data #
+####################################
+
+# Pandas Nullable Int32 type
+Int32:
+  # ds2ws_linktable
+  - seccode
+  - typ
+  - code
+  - coderank
+  - infocode
+  - inforank
+  - exchintcode
+
+string:
+  # ds2ws_linktable
+  - id
+  - primisocurrcode
+  - primiso
+  - dstype
+  - wstype
+
+date:
+  # ds2ws_linktable
+  - startdate
+  - enddate
+  - exenddate
+
+float32:
+  # ds2ws_linktable

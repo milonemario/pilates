@@ -1,0 +1,16 @@
+######################
+# Files for wrdsapps #
+######################
+
+# Note: The module wrdsapps contains many shcemas from the
+# postgres WRDS database.
+
+
+# Datastream - Worldscope linktable
+
+ds2ws_linktable:
+  schema: wrdsapps_link_datastream_wscope
+  table: ds2ws_linktable
+  index:
+    - code
+    - infocode
