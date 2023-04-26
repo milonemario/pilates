@@ -145,7 +145,7 @@ class data:
         for m in os.listdir(_modules_dir):
             for f in os.listdir(_modules_dir+m):
                 name, ext = os.path.splitext(f)
-                if ext == '.py':
+                if ext == '.py' and name != '__init__':
                     mod = importlib.__import__('pilates.modules.'+m+'.'+name,
                                                fromlist=[name])
                     class_ = getattr(mod, name)
@@ -201,6 +201,7 @@ class data:
             datadir (str): Path of the directory
 
         """
+        datadir = os.path.expanduser(datadir)
         if datadir[-1] != '/':
             self.datadir = datadir+'/'
         else:
@@ -620,7 +621,6 @@ class data_module:
                     try:
                         df.loc[:, k] = df[k].astype(chnd[k], errors='ignore')
                     except:
-                        import ipdb; ipdb.set_trace();
                         raise Exception('Error type conversion for column '+k)
             # Apply the dates
             if len(chd) > 0:

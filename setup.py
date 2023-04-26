@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(name='pilates',
       version='0.0.1',
@@ -10,7 +10,9 @@ setup(name='pilates',
       author='Mario Milone',
       author_email='milonemario@gmail.com',
       license='BSD-3',
-      packages=['pilates'],
+      # packages=['pilates', 'pilates.modules.audit'],
+      packages=['pilates'] + ['pilates.modules.' + p for p in find_packages('./pilates/modules/')],
+      package_data={'pilates': ['modules/**']},
       install_requires=[
           'numpy',
           'pandas',

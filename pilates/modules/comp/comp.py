@@ -567,52 +567,51 @@ class comp(wrds_module):
     ##### Redefinition of existing fields #####
     # Main purpose is to fill missing values for instance.
 
-
-    def _at(self, data):
-        """ Return Total Assets with missing valus when equals 0. """
-        key = self.key
-        df = self.open_data(data, key)
-        fields = ['at']
-        df[fields] = self._get_fund_fields(fields, df)
-        df.loc[df['at']==0, 'at'] = np.nan
-        return(df['at'])
-
-    def _xrd(self, data):
-        """ Return Expenses in R&D with 0 when missing values. """
-        key = self.key
-        df = self.open_data(data, key)
-        fields = ['xrd']
-        df[fields] = self._get_fund_fields(fields, df)  # Need the raw xrdq
-        df.loc[df.xrd.isna(), 'xrd'] = 0
-        return(df.xrd)
-
-    def _xsga(self, data):
-        """ Return Expenses in SGA with 0 when missing values. """
-        key = self.key
-        df = self.open_data(data, key)
-        fields = ['xsga']
-        df[fields] = self._get_fund_fields(fields, df)
-        df.loc[df.xsga.isna(), 'xsga'] = 0
-        return(df.xsga)
-
-    def _tlcf(self, data):
-        """ Return Tax Loss Carry Forward with 0 when missing values. """
-        key = self.key
-        df = self.open_data(data, key)
-        fields = ['tlcf']
-        df[fields] = self._get_fund_fields(fields, df)
-        df.loc[df.tlcf.isna(), 'tlcf'] = 0
-        return(df.tlcf)
-
-    def _itcb(self, data):
-        """ Return Investment Tax Credit with 0 when missing values. """
-        key = self.key
-        df = self.open_data(data, key)
-        fields = ['itcb']
-        df[fields] = self._get_fund_fields(fields, df)
-        df.loc[df.itcb.isna(), 'itcb'] = 0
-        return(df.itcb)
-
+#    def _at(self, data):
+#        """ Return Total Assets with missing valus when equals 0. """
+#        key = self.key
+#        df = self.open_data(data, key)
+#        fields = ['at']
+#        df[fields] = self._get_fund_fields(fields, df)
+#        df.loc[df['at']==0, 'at'] = np.nan
+#        return(df['at'])
+#
+#    def _xrd(self, data):
+#        """ Return Expenses in R&D with 0 when missing values. """
+#        key = self.key
+#        df = self.open_data(data, key)
+#        fields = ['xrd']
+#        df[fields] = self._get_fund_fields(fields, df)  # Need the raw xrdq
+#        df.loc[df.xrd.isna(), 'xrd'] = 0
+#        return(df.xrd)
+#
+#    def _xsga(self, data):
+#        """ Return Expenses in SGA with 0 when missing values. """
+#        key = self.key
+#        df = self.open_data(data, key)
+#        fields = ['xsga']
+#        df[fields] = self._get_fund_fields(fields, df)
+#        df.loc[df.xsga.isna(), 'xsga'] = 0
+#        return(df.xsga)
+#
+#    def _tlcf(self, data):
+#        """ Return Tax Loss Carry Forward with 0 when missing values. """
+#        key = self.key
+#        df = self.open_data(data, key)
+#        fields = ['tlcf']
+#        df[fields] = self._get_fund_fields(fields, df)
+#        df.loc[df.tlcf.isna(), 'tlcf'] = 0
+#        return(df.tlcf)
+#
+#    def _itcb(self, data):
+#        """ Return Investment Tax Credit with 0 when missing values. """
+#        key = self.key
+#        df = self.open_data(data, key)
+#        fields = ['itcb']
+#        df[fields] = self._get_fund_fields(fields, df)
+#        df.loc[df.itcb.isna(), 'itcb'] = 0
+#        return(df.itcb)
+#
     ##### Definition of new variables #####
 
     def _act_lct(self, data):
