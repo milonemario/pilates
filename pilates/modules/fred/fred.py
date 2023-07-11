@@ -21,7 +21,7 @@ class fred(data_module):
     # Make available some fredapi methods #
     #######################################
 
-    def get_series_info(series):
+    def get_series_info(self, series):
         self.fred = Fred(api_key = FRED_API_KEY)
         return self.fred.get_series_info(series)
 
