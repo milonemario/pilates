@@ -5,7 +5,7 @@ Provides processing functions for CRSP data.
 from pilates import wrds_module
 import pandas as pd
 import numpy as np
-import numba
+# import numba
 
 from sklearn.linear_model import LinearRegression
 
@@ -769,7 +769,7 @@ class crsp(wrds_module):
         df['lnret'] = np.log(1+df.ret) - np.log(1+df.vwretd)
 
         # Function to compute ncskew given a series of returns
-        @numba.jit(nopython=True)
+        # @numba.jit(nopython=True)
         def compute_ncskew(lnret):
             # Demean returns
             ret_dem = lnret - np.nanmean(lnret)
@@ -809,7 +809,7 @@ class crsp(wrds_module):
         df['lnret'] = np.log(1+df.ret) - np.log(1+df.vwretd)
 
         # Function to compute ncskew given a series of returns
-        @numba.jit(nopython=True)
+        # @numba.jit(nopython=True)
         def compute_duvol(lnret):
             # Compute the mean and split Ups and Downs
             mean = np.nanmean(lnret)

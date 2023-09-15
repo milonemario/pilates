@@ -619,14 +619,16 @@ class data_module:
                             df[k] = df[k].str.replace(char, "")
                     # Convert the field
                     try:
-                        df.loc[:, k] = df[k].astype(chnd[k], errors='ignore')
+                        # df.loc[:, k] = df[k].astype(chnd[k], errors='ignore')
+                        df[k] = df[k].astype(chnd[k], errors='ignore')
                     except:
                         raise Exception('Error type conversion for column '+k)
             # Apply the dates
             if len(chd) > 0:
                 for k in chd.keys():
                     #df.loc[:, k] = pd.to_datetime(df[k]).dt.date
-                    df.loc[:, k] = pd.to_datetime(df[k], errors='coerce')
+                    # df.loc[:, k] = pd.to_datetime(df[k], errors='coerce')
+                    df[k] = pd.to_datetime(df[k], errors='coerce')
                     #df.loc[df[k].isna(), k] = np.nan
 
         # Then use the user provided types

@@ -29,7 +29,8 @@ class fred(data_module):
     # Additional generic methods for pilates #
     ##########################################
 
-    def get_series_for_data(self, data, series, col_date=None, tolerance=None):
+    def get_series_for_data(self, data, series, col_date=None, tolerance=None,
+                            end_of_period=True):
         if col_date is None:
             # Use the date set at the library level
             col_date = self.d.col_date
@@ -41,10 +42,16 @@ class fred(data_module):
             freq = df_fred_info['frequency_short']
             if freq == 'A':
                 tolerance = pd.Timedelta('370 day')
+                if end_of_period:
+                    fred_series.index = fred_series.index + pd.offsets.YearEnd(0)
             elif freq == 'Q':
                 tolerance = pd.Timedelta('100 day')
+                if end_of_period:
+                    fred_series.index = fred_series.index + pd.offsets.QuarterEnd(0)
             elif freq == 'M':
                 tolerance = pd.Timedelta('40 day')
+                if end_of_period:
+                    fred_series.index = fred_series.index + pd.offsets.MonthEnd(0)
             elif freq == 'D':
                 tolerance = pd.Timedelta('2 day')
         else:
